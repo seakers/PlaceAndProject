@@ -4,6 +4,7 @@ from numbers import Number
 from mpl_toolkits.mplot3d import Axes3D #it's tempting. don't delete.
 
 def concaveHypersphere(numTest):
+    """returns a set of random points on the hypersphere in the all positive quadrant"""
     np.random.seed(2130935987)
     rands=np.random.rand(2, numTest)
     # rands=np.tile(np.arange(numTest)/(numTest+1), (2,1))
@@ -12,9 +13,13 @@ def concaveHypersphere(numTest):
     altRad=np.sqrt(1-z**2)
     return np.vstack((altRad*np.cos(np.pi/2*rands[1,:]), altRad*np.sin(np.pi/2*rands[1,:]), z)).T
 
-def draw3dSurface(points):
+def prep3dAxes():
     fig=plt.figure()
     ax=fig.add_subplot(111,projection='3d')
+    return ax
+
+def draw3dSurface(points):
+    ax=prep3dAxes()
     ax.plot(points[:,0], points[:,1], points[:,2], '.')
     ax.legend()
     plt.show()
