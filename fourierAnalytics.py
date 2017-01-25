@@ -78,6 +78,30 @@ class lowDimMeanPlane(MeanPlane):
     def plot2dResidual(self):
         plt.plot(self.inputResidual)
 
+    def draw3dMeanPlane(self):
+        dummyTest3d = self.paretoSamples
+        ax = Axes3D(plt.gcf())
+        # ax.scatter(dummyTest3d[:, 0], dummyTest3d[:, 1], dummyTest3d[:, 2], '.', label='sample points')
+        ax.plot(dummyTest3d[:, 0], dummyTest3d[:, 1], dummyTest3d[:, 2], '.', label='sample points')
+        # ax.plot(mp.inputProjections[:,0],mp.inputProjections[:,1],label='Projections')
+        minVal = np.min(self.inputProjections[:, 0:2], axis=0)
+        maxVal = np.max(self.inputProjections[:, 0:2], axis=0)
+        evalPointsX, evalPointsY = np.meshgrid((minVal[0], maxVal[0]),(minVal[1], maxVal[1]))
+        print(minVal)
+        print(maxVal)
+        assert not np.isclose(self.normalVect[2], 0)
+        evalPointsZ = (np.squeeze(np.dot(self.normalVect, self.meanPoint)) - self.normalVect[0] * evalPointsX -
+                       self.normalVect[1] * evalPointsY) / self.normalVect[2]
+        print(evalPointsZ)
+        ax.plot_surface(evalPointsX, evalPointsY, evalPointsZ,color='r',label='mean plane')
+
+    def plot3dResidual(self):
+        """
+        plots a graphic of the residual at any location on the plane
+        :return:
+        """
+        raise NotImplementedError
+
 def orderLocations1d(pointLocations):
     """
     returns an indexing array to place points in the proper locations
@@ -158,22 +182,29 @@ if __name__=="__main__":
 
     # demo finding the mean plane in 2d
     # seedList=np.linspace(0,np.pi/2,numsmpl)
-    seedList=np.sort(np.random.rand(numsmpl)*np.pi/2)
-    dummyTest2d=np.vstack((np.sin(seedList),np.cos(seedList)+0.1*np.sin(seedList*10))).T
+    # seedList=np.sort(np.random.rand(numsmpl)*np.pi/2)
+    # dummyTest2d=np.vstack((np.sin(seedList),np.cos(seedList)+0.1*np.sin(seedList*10))).T
 
-    mp=lowDimMeanPlane(dummyTest2d) # create the mean plane
+    # mp=lowDimMeanPlane(dummyTest2d) # create the mean plane
+    # plt.figure()
+    # mp.draw2dMeanPlane()
+    # plt.legend()
+    # plt.show()
+
+    # # demo spectral analysis in 2d
+    # fa=lowDimFourierAnalyzer.fromMeanPlane(mp) # create the fourier analysis
+
+    # plt.figure()
+    # fa.spectralPowerPlot()
+    # plt.show()
+
+    # plt.figure()
+    # spectral2dPlot(mp,fa)
+    # plt.show()
+
+    # demo finding the mean plane in 3d
+    dummyTest3d = concaveHypersphere(numsmpl)
+    mp = lowDimMeanPlane(dummyTest3d)
     plt.figure()
-    mp.draw2dMeanPlane()
-    plt.legend()
-    plt.show()
-
-    # demo spectral analysis in 2d
-    fa=lowDimFourierAnalyzer.fromMeanPlane(mp) # create the fourier analysis
-
-    plt.figure()
-    fa.spectralPowerPlot()
-    plt.show()
-
-    plt.figure()
-    spectral2dPlot(mp,fa)
+    mp.draw3dMeanPlane()
     plt.show()
