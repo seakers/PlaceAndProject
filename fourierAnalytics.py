@@ -110,7 +110,21 @@ def orderLocations1d(pointLocations):
     """
     return np.argsort(pointLocations)
 
+def orderLocations(xy):
+    """
+    reorders elements of an array-of-arrays such that the elements are in a monotonic order.
+
+
+    :param xy: an nxd array of locations in 2d to sort
+    :return:
+    """
+
 class FourierAnalyzer():
+    """
+    resource on learning what the multidimensional transform is and does: https://see.stanford.edu/materials/lsoftaee261/chap8.pdf
+    python nonuniform FFT: https://pypi.python.org/pypi/pynufft/0.3.2.8
+    Some other libraries: http://dsp.stackexchange.com/questions/16590/non-uniform-fft-with-fftw
+    """
     def __init__(self,pointHeight,pointLocation):
         """
         initializes the FourierAnalyzer object
@@ -152,7 +166,7 @@ class lowDimFourierAnalyzer(FourierAnalyzer):
         return lowDimFourierAnalyzer(meanPlane.inputResidual,meanPlane.inputInPlane)
 
     def spectralPowerPlot(self):
-        spectralPower=self.spectrum.real**2+self.spectrum.imag**2
+        spectralPower=np.abs(self.spectrum)**2
         print(spectralPower)
         plt.plot(self.fftFreqs,spectralPower)
         plt.xlabel('frequency')
