@@ -35,7 +35,7 @@ def numpyze(input):
         return input
     if isinstance(input, Number):
         return np.array((input,))
-    if hasattr(input, (list, tuple)):
+    if isinstance(input, (list, tuple)):
         return np.array(input)
     if hasattr(input, '__iter__'):
         return np.fromiter(input)
