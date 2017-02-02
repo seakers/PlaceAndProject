@@ -14,7 +14,7 @@ def concaveHypersphere(numTest):
     return np.vstack((altRad*np.cos(np.pi/2*rands[1,:]), altRad*np.sin(np.pi/2*rands[1,:]), z)).T
 
 def prep3dAxes():
-    fig=plt.figure()
+    fig=plt.gcf()
     ax=fig.add_subplot(111,projection='3d')
     return ax
 

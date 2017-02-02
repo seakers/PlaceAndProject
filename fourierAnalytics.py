@@ -102,12 +102,15 @@ class lowDimMeanPlane(MeanPlane):
         """
         raise NotImplementedError
 
+def incToEven(i):
+    return i+(i%2)
+
 class SlowFourierAnalyzer():
     """
     https://en.wikipedia.org/wiki/Discrete_Fourier_transform#Multidimensional_DFT
     https://en.wikipedia.org/wiki/Non-uniform_discrete_Fourier_transform#2-D_NDFT
     """
-    def __init__(self,pointHeight,pointLocation,frequencyDivisions=None):
+    def __init__(self,pointHeight,pointLocation,frequenciesToEval=None):
         """
         initializes the FourierAnalyzer object
         :param pointHeight:
@@ -115,13 +118,19 @@ class SlowFourierAnalyzer():
         """
         self.pointLocation=pointLocation
         self.pointHeight=pointHeight
-        if frequencyDivisions is None:
+        if frequenciesToEval is None:
             if len(pointLocation.shape)==1:
                 frequencyDivisions=(pointHeight.size,)
             else:
-                assert len(frequencyDivisions.shape)==2
-                frequencyDivisions=(pointHeight.size,)*pointLocation.shape[1]
-        self.frequencyDivisions=numpyze(frequencyDivisions)
+                nthRoot=incToEven(np.ceil(pointHeight.size**(1/pointLocation.shape[1])))
+                frequencyDivisions=(nthRoot,)*pointLocation.shape[1]
+            ranges=np.ptp(self.pointLocation,axis=0)
+            if len(self.pointLocation.shape)==1:
+                frequenciesToEval=1/np.linspace(-ranges/2, ranges/2,frequencyDivisions[0])[::-1]
+            else:
+                frequenciesToEval=1/np.array(list(map(lambda m,d : np.linspace(-m/2,m/2,d)[::-1],np.ptp(self.pointLocation,axis=0),frequencyDivisions)))
+        self.fftFreqs=numpyze(frequenciesToEval)
+        self.numFreqs=tuple(map(len,frequenciesToEval))
 
     # @property
     # def __freqSumMat(self):
@@ -139,22 +148,13 @@ class SlowFourierAnalyzer():
         if len(freqProd.shape)>1:
             freqProd=np.array(list(map(lambda arr: arr.flatten(), np.meshgrid(*freqProd))))
         else:
-            freqProd.resize((len(freqProd),1))
+            freqProd.resize((1,len(freqProd)))
         if len(self.pointLocation.shape)==1:
-            pointLoc=self.pointLocation[:,np.newaxis]
+            pointLoc=self.pointLocation[np.newaxis,:]
         else:
             pointLoc=self.pointLocation
-        exponentTerm=-2*np.pi*1j*np.dot(pointLoc,freqProd.T)
-        return np.dot(self.pointHeight,np.exp(exponentTerm)).reshape(self.frequencyDivisions)/self.pointHeight.size
-
-    @property
-    def fftFreqs(self):
-        """returns the frequencies at which the spectrum is evaluated"""
-        ranges=np.ptp(self.pointLocation,axis=0)
-        if len(self.pointLocation.shape)==1:
-            return 1/np.linspace(-ranges/2, ranges/2,self.frequencyDivisions[0])[::-1]
-        else:
-            return 1/np.array(list(map(lambda m,d : np.linspace(-m/2,-m/2,d)[::-1],np.ptp(self.pointLocation,axis=0),self.frequencyDivisions)))
+        exponentTerm=-2*np.pi*1j*np.dot(pointLoc,freqProd)
+        return np.dot(self.pointHeight,np.exp(exponentTerm)).reshape(self.numFreqs)/self.pointHeight.size
 
     def reconstruction(self, locations=None):
         if locations is None:
@@ -221,12 +221,25 @@ class FourierAnalyzer():
         """returns a FourierAnalyzer which analyzes the residuals as defined by locations in the inputProjections"""
         return FourierAnalyzer(meanPlane.inputResidual,meanPlane.inputInPlane)
 
-def spectralPowerPlot(fourierAnalyzerObj):
+def spectral1dPowerPlot(fourierAnalyzerObj):
     spectralPower=np.abs(fourierAnalyzerObj.spectrum)**2
     print(spectralPower)
     plt.plot(fourierAnalyzerObj.fftFreqs,spectralPower)
     plt.xlabel('frequency')
     plt.ylabel('square power')
+
+def spectral2dPowerPlot(fourierAnalyzerObj):
+    spectralPower=np.abs(fourierAnalyzerObj.spectrum)**2
+    freqProd=np.meshgrid(*fourierAnalyzerObj.fftFreqs, indexing='ij')
+    ax=prep3dAxes()
+    ax.plot_surface(freqProd[0],freqProd[1],spectralPower)
+
+def spectral2dPowerImage(fourierAnalyzerObj):
+    spectralPower=np.abs(fourierAnalyzerObj.spectrum)**2
+    plt.imshow(spectralPower,cmap='Greys')
+    plt.colorbar()
+    # plt.xticks(fourierAnalyzerObj.fftFreqs[0])
+    # plt.yticks(fourierAnalyzerObj.fftFreqs[1])
 
 def spectral2dPlot(meanPlane, analyzer):
     dummyTest2d=meanPlane.paretoSamples
@@ -248,41 +261,54 @@ def quick2dscatter(points):
     plt.show()
 
 if __name__=="__main__":
-    numsmpl=3000
+    numsmpl=30
 
     # demo finding the mean plane in 2d
-    seedList=np.linspace(0,np.pi/2,numsmpl)
-    seedList=np.sort(np.random.rand(numsmpl)*np.pi/2)
-    dummyTest2d=np.vstack((np.sin(seedList),np.cos(seedList))).T
+    # seedList=np.linspace(0,np.pi/2,numsmpl)
+    # seedList=np.sort(np.random.rand(numsmpl)*np.pi/2)
+    # dummyTest2d=np.vstack((np.sin(seedList),np.cos(seedList))).T
 
-    mp=lowDimMeanPlane(dummyTest2d) # create the mean plane
-    plt.figure()
+    # mp=lowDimMeanPlane(dummyTest2d) # create the mean plane
+    # plt.figure()
     # mp.draw2dMeanPlane()
-    mp.plot2dResidual()
-    plt.legend()
-    plt.show()
+    # mp.plot2dResidual()
+    # plt.legend()
+    # plt.show()
 
     # demo spectral analysis in 2d
-    faref=FourierAnalyzer.fromMeanPlane(mp) # create the fourier analysis
-    fa=SlowFourierAnalyzer(np.sort(mp.inputResidual),np.arange(mp.inputResidual.size))
+    # faref=FourierAnalyzer.fromMeanPlane(mp) # create the fourier analysis
+    # fa=SlowFourierAnalyzer(np.sort(mp.inputResidual),np.arange(mp.inputResidual.size))
     # fa=SlowFourierAnalyzer.fromMeanPlane(mp)
 
-    plt.figure()
-    spectralPowerPlot(fa)
+    # plt.figure()
+    # spectral1dPowerPlot(fa)
     # plt.plot(fa.fftFreqs,np.real(fa.spectrum), fa.fftFreqs,np.imag(fa.spectrum))
-    plt.show()
+    # plt.show()
 
-    plt.figure()
-    spectralPowerPlot(faref)
-    plt.show()
+    # plt.figure()
+    # spectral1dPowerPlot(faref)
+    # plt.show()
 
     # plt.figure()
     # spectral2dPlot(mp,fa)
     # plt.show()
 
     # demo finding the mean plane in 3d
-    # dummyTest3d = concaveHypersphere(numsmpl)
-    # mp = lowDimMeanPlane(dummyTest3d)
-    # plt.figure()
-    # mp.draw3dMeanPlane()
-    # plt.show()
+    dummyTest3d = concaveHypersphere(numsmpl)
+    mp = lowDimMeanPlane(dummyTest3d)
+    plt.figure()
+    mp.draw3dMeanPlane()
+    plt.show()
+
+    xx,yy=map(lambda ar: ar.flatten(), np.meshgrid(np.linspace(0,1,128),np.linspace(0,1,128)))
+    zz=np.sin(2*np.pi*xx)*np.cos(2*np.pi*yy)
+
+    fa=SlowFourierAnalyzer(zz,np.vstack((xx,yy)).T)
+    # fa=SlowFourierAnalyzer.fromMeanPlane(mp)
+    plt.figure()
+    spectral2dPowerPlot(fa)
+    plt.show()
+
+    plt.figure()
+    spectral2dPowerImage(fa)
+    plt.show()
