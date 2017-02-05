@@ -62,6 +62,14 @@ class MeanPlane():
         """
         return np.squeeze(np.dot(self._centeredSamples,self.normalVect[:,np.newaxis]))
 
+    @property
+    def tradeRatios(self):
+        """
+        :return: returns
+        """
+        return np.tile(self.normalVect[:,np.newaxis],(1,len(self.normalVect)))/np.tile(self.normalVect[np.newaxis,:],(len(self.normalVect),1))
+
+
 class lowDimMeanPlane(MeanPlane):
     """
     additional methods and properties enabled by having a mean plane in 2d or 3d. really a convienence for plotting.
@@ -76,7 +84,7 @@ class lowDimMeanPlane(MeanPlane):
         plt.plot(planeSampleX,planeSampleY, label='plane (from normal vector)')
 
     def plot2dResidual(self):
-        plt.plot(self.inputInPlane,self.inputResidual)
+        plt.plot(self.inputInPlane,self.inputResidual,'.-')
 
     def draw3dMeanPlane(self):
         dummyTest3d = self.paretoSamples
@@ -87,12 +95,12 @@ class lowDimMeanPlane(MeanPlane):
         minVal = np.min(self.inputProjections[:, 0:2], axis=0)
         maxVal = np.max(self.inputProjections[:, 0:2], axis=0)
         evalPointsX, evalPointsY = np.meshgrid((minVal[0], maxVal[0]),(minVal[1], maxVal[1]))
-        print(minVal)
-        print(maxVal)
+        # print(minVal)
+        # print(maxVal)
         assert not np.isclose(self.normalVect[2], 0)
         evalPointsZ = (np.squeeze(np.dot(self.normalVect, self.meanPoint)) - self.normalVect[0] * evalPointsX -
                        self.normalVect[1] * evalPointsY) / self.normalVect[2]
-        print(evalPointsZ)
+        # print(evalPointsZ)
         ax.plot_surface(evalPointsX, evalPointsY, evalPointsZ,color='r',label='mean plane')
 
     def plot3dResidual(self):
@@ -104,6 +112,8 @@ class lowDimMeanPlane(MeanPlane):
 
 def incToEven(i):
     return i+(i%2)
+def decToEven(i):
+    return i-(i%2)
 
 class SlowFourierAnalyzer():
     """
@@ -119,18 +129,20 @@ class SlowFourierAnalyzer():
         self.pointLocation=pointLocation
         self.pointHeight=pointHeight
         if frequenciesToEval is None:
-            if len(pointLocation.shape)==1:
-                frequencyDivisions=(pointHeight.size,)
-            else:
+            if len(pointLocation.shape)>1:
                 nthRoot=incToEven(np.ceil(pointHeight.size**(1/pointLocation.shape[1])))
                 frequencyDivisions=(nthRoot,)*pointLocation.shape[1]
             ranges=np.ptp(self.pointLocation,axis=0)
             if len(self.pointLocation.shape)==1:
-                frequenciesToEval=1/np.linspace(-ranges/2, ranges/2,frequencyDivisions[0])[::-1]
+                # frequenciesToEval=1/(ranges)*np.concatenate((np.arange(1,pointHeight.size//2),-np.arange(1,incToEven(pointHeight.size)/2)))
+                frequenciesToEval=1/(ranges)*np.arange(1,incToEven(pointHeight.size)/2)
             else:
-                frequenciesToEval=1/np.array(list(map(lambda m,d : np.linspace(-m/2,m/2,d)[::-1],np.ptp(self.pointLocation,axis=0),frequencyDivisions)))
+                frequenciesToEval=np.dot(1/(ranges[:,np.newaxis]),np.arange(1,incToEven(pointHeight.size)/2)[np.newaxis,:])
         self.fftFreqs=numpyze(frequenciesToEval)
-        self.numFreqs=tuple(map(len,frequenciesToEval))
+        if len(pointLocation.shape)==1:
+            self.numFreqs=len(frequenciesToEval)
+        else:
+            self.numFreqs=tuple(map(len,frequenciesToEval))
 
     # @property
     # def __freqSumMat(self):
@@ -144,22 +156,23 @@ class SlowFourierAnalyzer():
         :return: the one-sided spectrum of the pointHeights and locations input when creating the analyzer
         """
         # instead product out the list of frequencies and then calculate
-        freqProd=self.fftFreqs
+        freqProd=np.array(self.fftFreqs)
         if len(freqProd.shape)>1:
             freqProd=np.array(list(map(lambda arr: arr.flatten(), np.meshgrid(*freqProd))))
         else:
             freqProd.resize((1,len(freqProd)))
         if len(self.pointLocation.shape)==1:
-            pointLoc=self.pointLocation[np.newaxis,:]
+            pointLoc=self.pointLocation[:,np.newaxis]
         else:
             pointLoc=self.pointLocation
         exponentTerm=-2*np.pi*1j*np.dot(pointLoc,freqProd)
-        return np.dot(self.pointHeight,np.exp(exponentTerm)).reshape(self.numFreqs)/self.pointHeight.size
+        # return np.dot(self.pointHeight,np.exp(exponentTerm)).reshape(self.numFreqs)/self.pointHeight.size
+        return np.dot(self.pointHeight,np.exp(exponentTerm)).reshape(self.numFreqs)
 
     def reconstruction(self, locations=None):
         if locations is None:
             locations=self.pointLocation
-        freqProd=np.array(list(map(np.flatten, np.meshgrid(*self.fftFreqs))))
+        freqProd=np.array(list(map(lambda arr: arr.flatten(), np.meshgrid(*self.fftFreqs))))
         exponentTerm=-2*np.pi*1j*np.dot(np.tile(locations,(1,len(freqProd),1)),freqProd[:,:,np.newaxis])
         return np.dot(locations,np.exp(exponentTerm.T))
 
@@ -184,6 +197,7 @@ def orderLocations(xy):
     :param xy: an nxd array of locations in 2d to sort
     :return:
     """
+    raise NotImplementedError
 
 class FourierAnalyzer():
     """
@@ -211,7 +225,7 @@ class FourierAnalyzer():
     @property
     def fftFreqs(self):
         """returns the frequencies at which the spectrum is evaluated"""
-        return np.fft.rfftfreq(len(self.pointHeight))
+        return np.fft.rfftfreq(len(self.pointHeight),d=np.mean(np.diff(self.pointLocation)))
 
     def reconstruction(self):
         return np.fft.irfft(np.squeeze(self.spectrum), self.pointHeight.size)
@@ -223,8 +237,8 @@ class FourierAnalyzer():
 
 def spectral1dPowerPlot(fourierAnalyzerObj):
     spectralPower=np.abs(fourierAnalyzerObj.spectrum)**2
-    print(spectralPower)
-    plt.plot(fourierAnalyzerObj.fftFreqs,spectralPower)
+    # print(spectralPower)
+    plt.plot(fourierAnalyzerObj.fftFreqs,spectralPower,'.-')
     plt.xlabel('frequency')
     plt.ylabel('square power')
 
@@ -236,7 +250,7 @@ def spectral2dPowerPlot(fourierAnalyzerObj):
 
 def spectral2dPowerImage(fourierAnalyzerObj):
     spectralPower=np.abs(fourierAnalyzerObj.spectrum)**2
-    plt.imshow(spectralPower,cmap='Greys')
+    plt.imshow(spectralPower,cmap='Greys',interpolation='nearest')
     plt.colorbar()
     # plt.xticks(fourierAnalyzerObj.fftFreqs[0])
     # plt.yticks(fourierAnalyzerObj.fftFreqs[1])
@@ -255,6 +269,23 @@ def spectral2dPlot(meanPlane, analyzer):
     plt.plot(corrected[:,0],corrected[:,1],'.',label='corrected after spectral representation')
     plt.legend()
 
+def plotTradeRatios(mp, objLabels):
+    """
+    plots ratios of components of the plane. each box represents the value of the objectives trading between each other when restricted to the plane
+    :param mp: a mean plane object to plot
+    :return:
+    """
+    # reorder elements
+    tr=mp.tradeRatios
+    reorderArr=np.argsort(np.mean(tr,axis=0))
+    trr=tr[:,reorderArr]
+    trr=trr[reorderArr,:]
+    objLabels_reorder=list(map(lambda i: objLabels[i], range(len(objLabels))))
+    plt.imshow(trr,cmap='Greys',interpolation='nearest')
+    plt.colorbar()
+    plt.xticks(range(len(objLabels_reorder)),objLabels_reorder)
+    plt.yticks(range(len(objLabels_reorder)),objLabels_reorder)
+
 def quick2dscatter(points):
     """a quick plot made for debugging"""
     plt.plot(points[:,0],points[:,1])
@@ -264,34 +295,52 @@ if __name__=="__main__":
     numsmpl=30
 
     # demo finding the mean plane in 2d
-    # seedList=np.linspace(0,np.pi/2,numsmpl)
+    seedList=np.linspace(0,np.pi/2,numsmpl)
     # seedList=np.sort(np.random.rand(numsmpl)*np.pi/2)
-    # dummyTest2d=np.vstack((np.sin(seedList),np.cos(seedList))).T
+    dummyTest2d=np.vstack((np.sin(seedList),np.cos(seedList))).T
 
-    # mp=lowDimMeanPlane(dummyTest2d) # create the mean plane
-    # plt.figure()
-    # mp.draw2dMeanPlane()
-    # mp.plot2dResidual()
-    # plt.legend()
-    # plt.show()
+    mp=lowDimMeanPlane(dummyTest2d) # create the mean plane
+    plt.figure()
+    mp.draw2dMeanPlane()
+    mp.plot2dResidual()
+    plt.legend()
+    plt.show()
+
+    plt.figure()
+    plotTradeRatios(mp, list(map(lambda n: 'obj: '+str(n),range(mp.paretoSamples.shape[1]))))
+    plt.legend()
+    plt.show()
 
     # demo spectral analysis in 2d
-    # faref=FourierAnalyzer.fromMeanPlane(mp) # create the fourier analysis
-    # fa=SlowFourierAnalyzer(np.sort(mp.inputResidual),np.arange(mp.inputResidual.size))
+    faref=FourierAnalyzer.fromMeanPlane(mp) # create the fourier analysis
+    fa=SlowFourierAnalyzer.fromMeanPlane(mp)
+    # fa=SlowFourierAnalyzer(mp.inputResidual,np.arange(0,mp.paretoSamples.shape[0])/mp.paretoSamples.shape[0],faref.fftFreqs)
+
+    # dummy tests
+    # fa = SlowFourierAnalyzer(np.sin(np.linspace(0,2*np.pi,10)),np.linspace(0,10,10)) # what the FFT sees:
+    # fa = SlowFourierAnalyzer(np.sin(np.linspace(0,2*np.pi,10)),np.linspace(0,2*np.pi,10)) # what needs to agree.
+    # faref = FourierAnalyzer(np.sin(2*np.pi*np.arange(0,9)/10),np.arange(0,9)/10)
     # fa=SlowFourierAnalyzer.fromMeanPlane(mp)
 
-    # plt.figure()
-    # spectral1dPowerPlot(fa)
-    # plt.plot(fa.fftFreqs,np.real(fa.spectrum), fa.fftFreqs,np.imag(fa.spectrum))
-    # plt.show()
-
-    # plt.figure()
+    plt.figure()
+    plt.hold('on')
+    print(fa.fftFreqs)
+    print(faref.fftFreqs)
+    print(fa.spectrum)
+    print(faref.spectrum)
+    spectral1dPowerPlot(fa)
     # spectral1dPowerPlot(faref)
-    # plt.show()
+    # plt.plot(fa.fftFreqs,np.real(fa.spectrum), fa.fftFreqs,np.imag(fa.spectrum))
+    plt.show()
 
-    # plt.figure()
-    # spectral2dPlot(mp,fa)
-    # plt.show()
+    plt.figure()
+    spectral1dPowerPlot(fa)
+    spectral1dPowerPlot(faref)
+    plt.show()
+
+    plt.figure()
+    spectral2dPlot(mp,fa)
+    plt.show()
 
     # demo finding the mean plane in 3d
     dummyTest3d = concaveHypersphere(numsmpl)
@@ -300,11 +349,16 @@ if __name__=="__main__":
     mp.draw3dMeanPlane()
     plt.show()
 
+    plt.figure()
+    plotTradeRatios(mp, list(map(lambda n: 'obj: '+str(n),range(mp.paretoSamples.shape[1]))))
+    plt.legend()
+    plt.show()
+
     xx,yy=map(lambda ar: ar.flatten(), np.meshgrid(np.linspace(0,1,128),np.linspace(0,1,128)))
     zz=np.sin(2*np.pi*xx)*np.cos(2*np.pi*yy)
 
     fa=SlowFourierAnalyzer(zz,np.vstack((xx,yy)).T)
-    # fa=SlowFourierAnalyzer.fromMeanPlane(mp)
+    fa=SlowFourierAnalyzer.fromMeanPlane(mp)
     plt.figure()
     spectral2dPowerPlot(fa)
     plt.show()
