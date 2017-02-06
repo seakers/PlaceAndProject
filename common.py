@@ -18,6 +18,11 @@ def prep3dAxes():
     ax=fig.add_subplot(111,projection='3d')
     return ax
 
+def quick2dscatter(points):
+    """a quick plot made for debugging"""
+    plt.plot(points[:,0],points[:,1])
+    plt.show()
+
 def draw3dSurface(points):
     ax=prep3dAxes()
     ax.plot(points[:,0], points[:,1], points[:,2], '.')

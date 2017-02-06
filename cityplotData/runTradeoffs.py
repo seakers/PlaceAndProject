@@ -36,7 +36,8 @@ def runProblemAnalysis(probName,metricsFile,preferenceFile):
     normalizedData=dataRead.values*multiplier[np.newaxis,:]/np.ptp(dataRead.values,axis=0)[np.newaxis,:]
 
     runAnalysisDict=[run2danalysis,run3danalysis,runHighDimAnalysis]
-    runAnalysisDict[min(len(headers)-2,2)](normalizedData,headers,probName)
+    # runAnalysisDict[min(len(headers)-2,2)](normalizedData,headers,probName)
+    runAnalysisDict[min(len(headers)-2,2)](normalizedData,headers,None) # for testing
 
 if __name__=="__main__":
     metricsFiles=list(filter(lambda f: f[-8:]=='_met.csv', os.listdir()))
