@@ -14,7 +14,8 @@ def fourierTesting():
     # fa = SlowFourierAnalyzer(np.sin(np.linspace(0,2*np.pi,10)),np.linspace(0,10,10)) # what the FFT sees:
     # x=np.linspace(0,2*np.pi,10)
     # x=np.arange(0,10)/10
-    x=np.linspace(0,1,9)
+    x=np.linspace(0,1,100)
+    # x=np.linspace(0,1,9)
     # x=np.sort(np.random.rand(10))
     y=np.sin(2*np.pi*x)
     nyqFreq=len(x)//2
@@ -54,9 +55,6 @@ def fourierTesting():
     plt.show()
 
 def dim3hypersphereTesting():
-
-
-if __name__=='__main__':
     # demo finding the mean plane in 3d
     dummyTest3d = concaveHypersphere(numsmpl)
     run3danalysis(dummyTest3d)
@@ -74,3 +72,6 @@ if __name__=='__main__':
     plt.figure()
     spectral2dPowerImage(fa)
     plt.show()
+
+if __name__=='__main__':
+    fourierTesting()
