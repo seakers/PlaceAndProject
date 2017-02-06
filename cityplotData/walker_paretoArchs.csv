@@ -1,0 +1,27 @@
+{
+num sats per plane: 1, num of planes: 1, orbital altitude: 800, orbit inclination: 30, instrument FOV: 55
+|
+num sats per plane: 1, num of planes: 1, orbital altitude: 800, orbit inclination: 60, instrument FOV: 55
+|
+num sats per plane: 1, num of planes: 1, orbital altitude: 800, orbit inclination: 1.7202, instrument FOV: 55
+|
+num sats per plane: 2, num of planes: 1, orbital altitude: 800, orbit inclination: 30, instrument FOV: 55
+|
+num sats per plane: 2, num of planes: 1, orbital altitude: 800, orbit inclination: 60, instrument FOV: 55
+|
+num sats per plane: 2, num of planes: 1, orbital altitude: 800, orbit inclination: 1.7202, instrument FOV: 55
+|
+num sats per plane: 6, num of planes: 1, orbital altitude: 780, orbit inclination: 86.4, instrument FOV: 50
+|
+num sats per plane: 11, num of planes: 1, orbital altitude: 780, orbit inclination: 86.4, instrument FOV: 50
+|
+num sats per plane: 6, num of planes: 2, orbital altitude: 780, orbit inclination: 86.4, instrument FOV: 50
+|
+num sats per plane: 11, num of planes: 2, orbital altitude: 780, orbit inclination: 86.4, instrument FOV: 50
+|
+num sats per plane: 11, num of planes: 3, orbital altitude: 780, orbit inclination: 86.4, instrument FOV: 50
+|
+num sats per plane: 6, num of planes: 6, orbital altitude: 780, orbit inclination: 86.4, instrument FOV: 50
+|
+num sats per plane: 11, num of planes: 6, orbital altitude: 780, orbit inclination: 86.4, instrument FOV: 50
+}
