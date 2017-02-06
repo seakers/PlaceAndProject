@@ -33,11 +33,12 @@ def runProblemAnalysis(probName,metricsFile,preferenceFile):
     minMaxDict={'min':1, 'max':-1}
     multiplier=np.array(list(map(lambda e: minMaxDict[e.strip()],prefVect.split(','))))
 
-    normalizedData=dataRead.values*multiplier[np.newaxis,:]/np.ptp(dataRead.values,axis=0)[np.newaxis,:]
+    sameDirVals=dataRead.values*multiplier[np.newaxis,:]
+    normalizedData=(sameDirVals-sameDirVals.min(axis=0)[np.newaxis,:])/np.ptp(sameDirVals,axis=0)[np.newaxis,:]
 
     runAnalysisDict=[run2danalysis,run3danalysis,runHighDimAnalysis]
-    # runAnalysisDict[min(len(headers)-2,2)](normalizedData,headers,probName)
-    runAnalysisDict[min(len(headers)-2,2)](normalizedData,headers,None) # for testing
+    runAnalysisDict[min(len(headers)-2,2)](normalizedData,headers,probName)
+    # runAnalysisDict[min(len(headers)-2,2)](normalizedData,headers,None) # for testing
 
 if __name__=="__main__":
     metricsFiles=list(filter(lambda f: f[-8:]=='_met.csv', os.listdir()))
