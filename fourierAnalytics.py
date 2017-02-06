@@ -4,6 +4,7 @@ import itertools as it
 import matplotlib.pyplot as plt
 import sklearn as skl
 from sklearn.decomposition import pca
+import functools as ft
 
 from common import *
 
@@ -133,10 +134,10 @@ class SlowFourierAnalyzer():
                 frequencyDivisions=(nthRoot,)*pointLocation.shape[1]
             ranges=np.ptp(self.pointLocation,axis=0)
             if len(self.pointLocation.shape)==1:
-                frequenciesToEval=1/(ranges)*np.concatenate((np.arange(1,pointHeight.size//2),-np.arange(1,incToEven(pointHeight.size)/2)))
+                frequenciesToEval=1/(ranges)*np.concatenate((np.arange(1,pointHeight.size//2+1),-np.arange(1,incToEven(pointHeight.size)/2+1)[::-1]))
                 # frequenciesToEval=1/(ranges)*np.arange(1,incToEven(pointHeight.size)/2)
             else:
-                frequenciesToEval=np.dot(1/(ranges[:,np.newaxis]),np.concatenate((np.arange(1,pointHeight.size//2),-np.arange(1,incToEven(pointHeight.size)/2)))[np.newaxis,:])
+                frequenciesToEval=np.dot(1/(ranges[:,np.newaxis]),np.concatenate((np.arange(1,pointHeight.size//2),-np.arange(1,incToEven(pointHeight.size)/2)[::-1]))[np.newaxis,:])
                 # frequenciesToEval=np.dot(1/(ranges[:,np.newaxis]),np.arange(1,incToEven(pointHeight.size)/2)[np.newaxis,:])
         self.fftFreqs=numpyze(frequenciesToEval)
         self.realInput=False
@@ -180,6 +181,11 @@ class SlowFourierAnalyzer():
             locations=self.pointLocation
         return reconstruction(self.fftFreqs,locations,self.spectrum,self.pointHeight.size)
 
+    @classmethod
+    def fromMeanPlane(cls,meanPlane):
+        """returns a FourierAnalyzer which analyzes the residuals as defined by locations in the inputProjections"""
+        return SlowFourierAnalyzer(meanPlane.inputResidual,meanPlane.inputInPlane)
+
 def reconstruction(freqs, locations, spectrum,numPts):
 
     freqProd=np.array(freqs)
@@ -195,12 +201,6 @@ def reconstruction(freqs, locations, spectrum,numPts):
         pointLoc=locations
     exponentTerm=2*np.pi*1j*np.dot(freqProd.T,pointLoc.T)
     return np.squeeze(np.dot(spectrum,np.exp(exponentTerm)))/numPts
-
-
-    @classmethod
-    def fromMeanPlane(cls,meanPlane):
-        """returns a FourierAnalyzer which analyzes the residuals as defined by locations in the inputProjections"""
-        return SlowFourierAnalyzer(meanPlane.inputResidual,meanPlane.inputInPlane)
 
 def orderLocations1d(pointLocations):
     """
@@ -297,25 +297,36 @@ def approximationPlot2d(meanPlane, analyzer):
     dummyTest2d=meanPlane.paretoSamples
     mp=meanPlane
     # plt.plot(mp._centeredSamples[:,0],mp._centeredSamples[:,1])
-    plt.plot(dummyTest2d[:,0],dummyTest2d[:,1],'.',label='Pareto Surface')
-    plt.plot(mp.inputProjections[:,0],mp.inputProjections[:,1],'.',label='Projections')
-    # for point in zip(mp.inputProjections,dummyTest2d):
-    #     plt.plot((point[0][0],point[1][0]), (point[0][1],point[1][1]))
-    plt.plot(np.linspace(0,1,5),(np.dot(mp.normalVect,mp.meanPoint)-mp.normalVect[0]*np.linspace(0,1,5))/mp.normalVect[1])
+    plt.plot(dummyTest2d[:,0],dummyTest2d[:,1],'.',label='Pareto Points')
+    plt.plot(mp.inputProjections[:,0],mp.inputProjections[:,1],'.',label='ProjectedLocations')
+    spectralCurveInPlane=np.linspace(mp.inputInPlane.min(),mp.inputInPlane.max(),10*mp.inputInPlane.size)
+    planeCurve=np.dot(spectralCurveInPlane[:,np.newaxis],np.squeeze(mp.basisVects)[np.newaxis,:])+mp.meanPoint[np.newaxis,:]
+    plt.plot(planeCurve[:,0],planeCurve[:,1])
+
     filteredCorrection=analyzer.reconstruction()
-    corrected=mp.inputProjections+np.dot(filteredCorrection[:,np.newaxis],mp.normalVect[np.newaxis,:])
-    plt.plot(corrected[:,0],corrected[:,1],'.',label='corrected after spectral representation')
+    spectralCurveOutOfPlane=analyzer.reconstruction(spectralCurveInPlane)
+    spectralCurve=planeCurve+np.dot(spectralCurveOutOfPlane[:,np.newaxis],mp.normalVect[np.newaxis,:])
+    plt.plot(spectralCurve[:,0],spectralCurve[:,1],label='reconstructed curve')
+
+    # corrected=mp.inputProjections+np.dot(filteredCorrection[:,np.newaxis],mp.normalVect[np.newaxis,:])
+    # plt.plot(corrected[:,0],corrected[:,1],'.',label='spectral representation of inputs')
+
     plt.axis('equal')
     plt.legend()
 
-def plotTradeRatios(mp, objLabels):
+def plotTradeRatios(mp, objLabels,preconditioner=None):
     """
     plots ratios of components of the plane. each box represents the value of the objectives trading between each other when restricted to the plane
     :param mp: a mean plane object to plot
     :return:
     """
+
+    if preconditioner is None:
+        tr=mp.tradeRatios
+    else:
+        tr=preconditioner(mp.tradeRatios)
+
     # reorder elements
-    tr=mp.tradeRatios
     reorderArr=np.argsort(np.mean(tr,axis=0))
     trr=tr[:,reorderArr]
     trr=trr[reorderArr,:]
@@ -324,29 +335,35 @@ def plotTradeRatios(mp, objLabels):
     plt.colorbar()
     plt.xticks(range(len(objLabels_reorder)),objLabels_reorder)
     plt.yticks(range(len(objLabels_reorder)),objLabels_reorder)
+logAbs=lambda a: np.log10(np.abs(a))
+plotLogTradeRatios=ft.partial(plotTradeRatios,preconditioner=logAbs)
 
 def quick2dscatter(points):
     """a quick plot made for debugging"""
     plt.plot(points[:,0],points[:,1])
     plt.show()
 
-def run2danalysis(data,saveFigsPrepend=None):
+def run2danalysis(data,objHeaders=None,saveFigsPrepend=None):
     """
+
     standard set of plots generated for 2-objective problems
     :param data: designs to plot. each row is a design and each column is an objective
     :param saveFigsPrepend: a prepend name for saving figures generated. None (default) prevents automatic saving.
     """
+    if objHeaders is None:
+        objHeaders=list(map(lambda n: 'obj: '+str(n),range(data.shape[1])))
     mp=lowDimMeanPlane(data) # create the mean plane
-    plt.figure()
-    mp.draw2dMeanPlane()
-    # mp.plot2dResidual()
-    plt.legend()
-    if saveFigsPrepend is not None:
-        plt.savefig(saveFigsPrepend+'_meanPlane.png',bbox_inches='tight')
-    plt.show()
+
+    # plt.figure()
+    # mp.draw2dMeanPlane()
+    # # mp.plot2dResidual()
+    # plt.legend()
+    # if saveFigsPrepend is not None:
+    #     plt.savefig(saveFigsPrepend+'_meanPlane.png',bbox_inches='tight')
+    # plt.show()
 
     plt.figure()
-    plotTradeRatios(mp, list(map(lambda n: 'obj: '+str(n),range(mp.paretoSamples.shape[1]))))
+    plotLogTradeRatios(mp, objHeaders)
     plt.legend()
     if saveFigsPrepend is not None:
         plt.savefig(saveFigsPrepend+'_tradeRatios.png',bbox_inches='tight')
@@ -365,12 +382,14 @@ def run2danalysis(data,saveFigsPrepend=None):
         plt.savefig(saveFigsPrepend+'_reverseTransform.png',bbox_inches='tight')
     plt.show()
 
-def run3danalysis(data,saveFigsPrepend=None):
+def run3danalysis(data,objHeaders=None,saveFigsPrepend=None):
     """
     standard set of plots generated for 2-objective problems
     :param data: designs to plot. each row is a design and each column is an objective
     :param saveFigsPrepend: a prepend name for saving figures generated. None (default) prevents automatic saving.
     """
+    if objHeaders is not None:
+        objHeaders=list(map(lambda n: 'obj: '+str(n),range(data.shape[1])))
     mp=lowDimMeanPlane(data) # create the mean plane
     plt.figure()
     mp.draw3dMeanPlane()
@@ -381,7 +400,7 @@ def run3danalysis(data,saveFigsPrepend=None):
     plt.show()
 
     plt.figure()
-    plotTradeRatios(mp, list(map(lambda n: 'obj: '+str(n),range(mp.paretoSamples.shape[1]))))
+    plotLogTradeRatios(mp, objHeaders)
     plt.legend()
     if saveFigsPrepend is not None:
         plt.savefig(saveFigsPrepend+'_tradeRatios.png',bbox_inches='tight')
@@ -406,60 +425,77 @@ def run3danalysis(data,saveFigsPrepend=None):
     #    plt.savefig(saveFigsPrepend+'_reverseTransform.png',bbox_inches='tight')
     # plt.show()
 
+def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None):
+    """
+    standard set of plots generated for 2-objective problems
+    :param data: designs to plot. each row is a design and each column is an objective
+    :param saveFigsPrepend: a prepend name for saving figures generated. None (default) prevents automatic saving.
+    """
+    if objHeaders is not None:
+        objHeaders=list(map(lambda n: 'obj: '+str(n),range(data.shape[1])))
+    mp=lowDimMeanPlane(data) # create the mean plane
+
+    plt.figure()
+    plotLogTradeRatios(mp, objHeaders)
+    plt.legend()
+    if saveFigsPrepend is not None:
+        plt.savefig(saveFigsPrepend+'_tradeRatios.png',bbox_inches='tight')
+    plt.show()
+
 if __name__=="__main__":
     numsmpl=30
 
     # demo finding the mean plane in 2d
-    # seedList=np.linspace(0,np.pi/2,numsmpl)
+    seedList=np.linspace(0,np.pi/2,numsmpl)
     # seedList=np.sort(np.random.rand(numsmpl)*np.pi/2)
-    # dummyTest2d=np.vstack((np.sin(seedList),np.cos(seedList))).T
+    dummyTest2d=np.vstack((np.sin(seedList),np.cos(seedList))).T
 
     # run2danalysis(dummyTest2d,saveFigsPrepend='testSave')
-    # run2danalysis(dummyTest2d)
+    run2danalysis(dummyTest2d)
 
 
-    # dummy tests
-    # fa = SlowFourierAnalyzer(np.sin(np.linspace(0,2*np.pi,10)),np.linspace(0,10,10)) # what the FFT sees:
-    # x=np.linspace(0,2*np.pi,10)
-    x=np.arange(0,9)/10
-    # x=np.linspace(0,1,10)
-    # x=np.sort(np.random.rand(10))
-    y=np.sin(2*np.pi*x)
-    nyqFreq=len(x)//2
-    # fa = SlowFourierAnalyzer(y,x,frequenciesToEval=np.concatenate((np.arange(nyqFreq)/nyqFreq,-np.arange(nyqFreq)/nyqFreq))) # what needs to agree.
-    faref = FourierAnalyzer(y,x)
-    fa=SlowFourierAnalyzer(y,x,frequenciesToEval=faref.fftFreqs)
-    # fa=SlowFourierAnalyzer.fromMeanPlane(mp)
+    # # dummy tests
+    # # fa = SlowFourierAnalyzer(np.sin(np.linspace(0,2*np.pi,10)),np.linspace(0,10,10)) # what the FFT sees:
+    # # x=np.linspace(0,2*np.pi,10)
+    # # x=np.arange(0,10)/10
+    # x=np.linspace(0,1,9)
+    # # x=np.sort(np.random.rand(10))
+    # y=np.sin(2*np.pi*x)
+    # nyqFreq=len(x)//2
+    # # fa = SlowFourierAnalyzer(y,x,frequenciesToEval=np.concatenate((np.arange(nyqFreq)/nyqFreq,-np.arange(nyqFreq)/nyqFreq))) # what needs to agree.
+    # faref = FourierAnalyzer(y,x)
+    # fa=SlowFourierAnalyzer(y,x)
+    # # fa=SlowFourierAnalyzer.fromMeanPlane(mp)
 
-    print(fa.fftFreqs)
-    print(faref.fftFreqs)
-    print(fa.spectrum)
-    print(faref.spectrum)
+    # print(fa.fftFreqs)
+    # print(faref.fftFreqs)
+    # print(fa.spectrum)
+    # print(faref.spectrum)
 
-    plt.figure()
-    plt.hold('on')
-    spectral1dPowerPlot(fa)
-    spectral1dPowerPlot(faref)
-    plt.show()
+    # plt.figure()
+    # plt.hold('on')
+    # spectral1dPowerPlot(fa)
+    # spectral1dPowerPlot(faref)
+    # plt.show()
 
-    plt.figure()
-    plt.hold('on')
-    spectral1dPhasePlot(fa)
-    spectral1dPhasePlot(faref)
-    plt.show()
+    # plt.figure()
+    # plt.hold('on')
+    # spectral1dPhasePlot(fa)
+    # spectral1dPhasePlot(faref)
+    # plt.show()
 
-    plt.figure()
-    plt.hold('on')
-    smplX=np.sort(np.concatenate((np.linspace(0,1,64),x)))
-    smplY=np.sin(2*np.pi*smplX)
-    plt.plot(smplX,smplY,label='true')
-    plt.plot(smplX,fa.reconstruction(smplX),label='slow')
-    plt.plot(smplX,faref.reconstruction(smplX),label='fast')
-    plt.plot(x,y,'.',label='true')
-    plt.plot(fa.pointLocation,fa.reconstruction(),'.',label='slow')
-    plt.plot(x,faref.reconstruction(),'.',label='fast')
-    plt.legend()
-    plt.show()
+    # plt.figure()
+    # plt.hold('on')
+    # smplX=np.sort(np.concatenate((np.linspace(0,1,64),x)))
+    # smplY=np.sin(2*np.pi*smplX)
+    # plt.plot(smplX,smplY,label='true')
+    # plt.plot(smplX,fa.reconstruction(smplX),label='slow')
+    # plt.plot(smplX,faref.reconstruction(smplX),label='fast')
+    # plt.plot(x,y,'.',label='true')
+    # plt.plot(fa.pointLocation,fa.reconstruction(),'.',label='slow')
+    # plt.plot(x,faref.reconstruction(),'.',label='fast')
+    # plt.legend()
+    # plt.show()
 
     # demo finding the mean plane in 3d
     # dummyTest3d = concaveHypersphere(numsmpl)
