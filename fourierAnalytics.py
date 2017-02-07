@@ -32,11 +32,14 @@ class SlowFourierAnalyzer():
                 nthRoot=incToEven(np.ceil(pointHeight.size**(1/pointLocation.shape[1])))
                 frequencyDivisions=(nthRoot,)*pointLocation.shape[1]
             ranges=np.ptp(self.pointLocation,axis=0)
+            # __oneFreqRange=lambda range, n: np.concatenate((np.linspace(0,range,n//2+1),np.linspace(0,range,incToEven(n)/2+1)[::-1]))
             if len(self.pointLocation.shape)==1:
                 frequenciesToEval=1/(ranges)*np.concatenate((np.arange(1,pointHeight.size//2+1),-np.arange(1,incToEven(pointHeight.size)/2+1)[::-1]))
+                # frequenciesToEval=__oneFreqRange(ranges,pointHeight.size)
                 # frequenciesToEval=1/(ranges)*np.arange(1,incToEven(pointHeight.size)/2)
             else:
                 frequenciesToEval=np.dot(1/(ranges[:,np.newaxis]),np.concatenate((np.arange(1,pointHeight.size//2),-np.arange(1,incToEven(pointHeight.size)/2)[::-1]))[np.newaxis,:])
+                # frequenciesToEval=np.array(list(map(__oneFreqRange,ranges,it.repeat(pointHeight.size))))
                 # frequenciesToEval=np.dot(1/(ranges[:,np.newaxis]),np.arange(1,incToEven(pointHeight.size)/2)[np.newaxis,:])
         self.fftFreqs=numpyze(frequenciesToEval)
         self.realInput=False
@@ -44,6 +47,17 @@ class SlowFourierAnalyzer():
             self.numFreqs=len(frequenciesToEval)
         else:
             self.numFreqs=tuple(map(len,frequenciesToEval))
+        self.spectralFilters=[]
+        self.inputFilters=[]
+
+    def addSpectralFilter(self,filter):
+        self.spectralFilters.append(filter)
+    def removeSpectralFilter(self, filter):
+        self.spectralFilters.remove(filter)
+    def addInputFilter(self,filter):
+        self.inputFilters.append(filter)
+    def removeInputFilter(self,filter):
+        self.inputFilters.remove(filter)
 
     # @property
     # def __freqSumMat(self):
@@ -57,18 +71,21 @@ class SlowFourierAnalyzer():
         :return: the one-sided spectrum of the pointHeights and locations input when creating the analyzer
         """
         # instead product out the list of frequencies and then calculate
-        freqProd=np.array(self.fftFreqs)
-        if len(freqProd.shape)>1:
-            freqProd=np.array(list(map(lambda arr: arr.flatten(), np.meshgrid(*freqProd))))
-        else:
-            freqProd.resize((1,len(freqProd)))
-        if len(self.pointLocation.shape)==1:
-            pointLoc=self.pointLocation[:,np.newaxis]
-        else:
-            pointLoc=self.pointLocation
-        exponentTerm=-2*np.pi*1j*np.dot(pointLoc,freqProd)
-        # return np.dot(self.pointHeight,np.exp(exponentTerm)).reshape(self.numFreqs)/self.pointHeight.size
-        return np.dot(self.pointHeight,np.exp(exponentTerm)).reshape(self.numFreqs)
+        return fowardTransform(self.fftFreqs,self.pointLocation, self.pointHeight)
+
+    def filteredSpectrum(self):
+        """
+
+        :return:
+        """
+        filtLoc=self.pointLocation
+        filtHeight=self.pointHeight
+        for filt in self.inputFilters:
+            filtLoc, filtHeight=filt(filtLoc,filtHeight)
+        ret=fowardTransform(self.fftFreqs, filtLoc, filtHeight)
+        for filt in self.spectralFilters:
+            ret=filt(ret)
+        return ret
 
     def reconstruction(self, locations=None):
         """
@@ -78,12 +95,27 @@ class SlowFourierAnalyzer():
         """
         if locations is None:
             locations=self.pointLocation
-        return reconstruction(self.fftFreqs,locations,self.spectrum,self.pointHeight.size)
+        return reconstruction(self.fftFreqs,locations,self.filteredSpectrum(),self.pointHeight.size)
 
     @classmethod
     def fromMeanPlane(cls,meanPlane):
         """returns a FourierAnalyzer which analyzes the residuals as defined by locations in the inputProjections"""
         return SlowFourierAnalyzer(meanPlane.inputResidual,meanPlane.inputInPlane)
+
+def fowardTransform(freqs, locations,functionVals):
+    freqProd=np.array(freqs)
+    if len(freqProd.shape)>1:
+        freqProd=np.array(list(map(lambda arr: arr.flatten(), np.meshgrid(*freqProd))))
+    else:
+        freqProd.resize((1,len(freqProd)))
+    if len(locations.shape)==1:
+        pointLoc=locations[:,np.newaxis]
+    else:
+        pointLoc=locations
+    exponentTerm=-2*np.pi*1j*np.dot(pointLoc,freqProd)
+    # return np.dot(self.pointHeight,np.exp(exponentTerm)).reshape(self.numFreqs)/self.pointHeight.size
+    numFreqs=list(map(len, freqs))
+    return np.dot(functionVals,np.exp(exponentTerm)).reshape(numFreqs)
 
 def reconstruction(freqs, locations, spectrum,numPts):
 
@@ -100,6 +132,10 @@ def reconstruction(freqs, locations, spectrum,numPts):
         pointLoc=locations
     exponentTerm=2*np.pi*1j*np.dot(freqProd.T,pointLoc.T)
     return np.squeeze(np.dot(spectrum,np.exp(exponentTerm)))/numPts
+
+# def gaussBlur():
+    #need to verify this works in arbitrary dimension.
+    # scipy.ndimage.filters.gaussian_filter(input, sigma, truncate=)
 
 def orderLocations1d(pointLocations):
     """
@@ -134,6 +170,17 @@ class FourierAnalyzer():
         orderingArray=orderLocations1d(pointLocation)
         self.pointHeight=pointHeight[orderingArray]
         self.pointLocation=pointLocation[orderingArray]
+        self.spectralFilters=[]
+        self.inputFilters=[]
+
+    def addSpectralFilter(self,filter):
+        self.spectralFilters.append(filter)
+    def removeSpectralFilter(self, filter):
+        self.spectralFilters.remove(filter)
+    def addInputFilter(self,filter):
+        self.inputFilters.append(filter)
+    def removeInputFilter(self,filter):
+        self.inputFilters.remove(filter)
 
     @property
     def spectrum(self):
@@ -141,6 +188,16 @@ class FourierAnalyzer():
         :return: the one-sided spectrum of the pointHeights and locations input when creating the analyzer
         """
         return np.fft.fft(self.pointHeight)
+
+    def filteredSpectrum(self):
+        """
+
+        :return:
+        """
+        ret=self.spectrum
+        for filt in self.spectralFilters:
+            ret=filt(ret)
+        return ret
 
     @property
     def fftFreqs(self):
@@ -158,7 +215,7 @@ class FourierAnalyzer():
         else:
             if locations is None:
                 locations=self.pointLocation
-            return reconstruction(self.fftFreqs,locations,self.spectrum,self.pointHeight.size)
+            return reconstruction(self.fftFreqs,locations,self.filteredSpectrum(),self.pointHeight.size)
 
     @classmethod
     def fromMeanPlane(cls,meanPlane):
