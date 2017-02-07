@@ -251,6 +251,7 @@ def run2danalysis(data,objHeaders=None,saveFigsPrepend=None):
     if saveFigsPrepend is not None:
         plt.savefig(saveFigsPrepend+'_reverseTransform.png',bbox_inches='tight')
     plt.show()
+    return (mp,fa)
 
 def run3danalysis(data,objHeaders=None,saveFigsPrepend=None):
     """
@@ -258,7 +259,7 @@ def run3danalysis(data,objHeaders=None,saveFigsPrepend=None):
     :param data: designs to plot. each row is a design and each column is an objective
     :param saveFigsPrepend: a prepend name for saving figures generated. None (default) prevents automatic saving.
     """
-    if objHeaders is not None:
+    if objHeaders is None:
         objHeaders=list(map(lambda n: 'obj: '+str(n),range(data.shape[1])))
     mp=lowDimMeanPlane(data) # create the mean plane
     plt.figure()
@@ -301,7 +302,7 @@ def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None):
     :param data: designs to plot. each row is a design and each column is an objective
     :param saveFigsPrepend: a prepend name for saving figures generated. None (default) prevents automatic saving.
     """
-    if objHeaders is not None:
+    if objHeaders is None:
         objHeaders=list(map(lambda n: 'obj: '+str(n),range(data.shape[1])))
     mp=lowDimMeanPlane(data) # create the mean plane
 

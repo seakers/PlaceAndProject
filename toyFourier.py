@@ -54,6 +54,58 @@ def fourierTesting():
     plt.legend()
     plt.show()
 
+def wavyPfrontDemo():
+    seedList=np.linspace(0,np.pi/2,128)
+    x=np.cos(seedList)
+    y=np.sin(seedList)
+    data=np.vstack((x,y)).T
+    mp,fa=run2danalysis(data,saveFigsPrepend='circleDemo')
+
+    plt.figure()
+    plt.plot(mp.inputInPlane,mp.inputResidual)
+    plt.xlabel('projected inputs in the plane')
+    plt.ylabel('residual to the input location from the plane')
+    plt.savefig('circleDemo_residualPlot.png')
+    plt.show()
+
+    plt.figure()
+    mp.draw2dMeanPlane()
+    plt.axis('equal')
+    plt.savefig('circleDemo_meanPlane.png')
+    plt.show()
+
+    x=np.concatenate((np.linspace(0,0.5,32),0.5*np.ones(32)))*2
+    y=np.concatenate((np.ones(32),    np.linspace(1,0,32)))
+    data=np.vstack((x,y)).T
+    mp,fa=run2danalysis(data,saveFigsPrepend='singleBoxDemo')
+    plt.figure()
+    plt.plot(mp.inputInPlane,mp.inputResidual)
+    plt.xlabel('projected inputs in the plane')
+    plt.ylabel('residual to the input location from the plane')
+    plt.savefig('singleBoxyDemo_residualPlot.png')
+    plt.show()
+    plt.figure()
+    mp.draw2dMeanPlane()
+    plt.axis('equal')
+    plt.savefig('singleBoxDemo_meanPlane.png')
+    plt.show()
+
+    x=np.concatenate((np.linspace(0,0.5,32),0.5*np.ones(32),      np.linspace(0.5,1,32),np.ones(32)))
+    y=np.concatenate((np.ones(32),          np.linspace(1,0.5,32),0.5*np.ones(32),      np.linspace(0.5,0,32)))
+    data=np.vstack((x,y)).T
+    mp,fa=run2danalysis(data,saveFigsPrepend='boxyDemo')
+    plt.figure()
+    plt.plot(mp.inputInPlane,mp.inputResidual)
+    plt.xlabel('projected inputs in the plane')
+    plt.ylabel('residual to the input location from the plane')
+    plt.savefig('boxyDemo_residualPlot.png')
+    plt.show()
+    plt.figure()
+    mp.draw2dMeanPlane()
+    plt.axis('equal')
+    plt.savefig('boxyDemo_meanPlane.png')
+    plt.show()
+
 def dim3hypersphereTesting():
     # demo finding the mean plane in 3d
     dummyTest3d = concaveHypersphere(numsmpl)
@@ -74,4 +126,5 @@ def dim3hypersphereTesting():
     plt.show()
 
 if __name__=='__main__':
-    fourierTesting()
+    # fourierTesting()
+    wavyPfrontDemo()
