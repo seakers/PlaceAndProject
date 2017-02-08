@@ -141,6 +141,6 @@ def plotTradeRatios(mp, objLabels,preconditioner=None):
     plt.imshow(trr,cmap='Greys',interpolation='nearest')
     plt.colorbar()
     plt.xticks(range(len(objLabels_reorder)),objLabels_reorder)
-    plt.yticks(range(len(objLabels_reorder)),objLabels_reorder[::-1])
+    plt.yticks(range(len(objLabels_reorder)),objLabels_reorder)
 logAbs=lambda a: np.log10(np.abs(a))
 plotLogTradeRatios=ft.partial(plotTradeRatios,preconditioner=logAbs)
