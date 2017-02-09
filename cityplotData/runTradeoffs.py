@@ -6,6 +6,29 @@ import os
 import functools as ft
 import operator as op
 
+def anyCompetion(sample):
+    ranks=np.argsort(sample, axis=0)
+    ret=np.zeros((sample.shape[1],sample.shape[1]), dtype=bool)
+    for i,j in it.combinations(range(sample.shape[0]),2):
+        ret[i,j]=np.any(ranks[:,i]!=ranks[:,j])
+        ret[j,i]=ret[i,j]
+    return ret
+
+def covarCompete(sample):
+    cov=np.dot(sample.T,sample)
+    return cov<0
+
+def printCooperating(competeMatrix,objNames=None):
+    if objNames is None:
+        objNames=['obj: '+str(i) for i in range(competeMatrix.shape[0])]
+    coopObj=np.nonzero(np.logical_not(competeMatrix))
+    skipList=set()
+    for i,j in zip(coopObj[0], coopObj[1]):
+        if (j,i) not in skipList:
+            skipList.add((j,i))
+            print(objNames[i],objNames[j])
+
+
 def fixHeader(filename):
     """
     strips out excess commas in the header line. not sure why they are there.

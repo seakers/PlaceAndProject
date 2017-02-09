@@ -1,4 +1,5 @@
 import numpy as np
+import scipy as sp
 import pandas as pd
 import itertools as it
 import matplotlib.pyplot as plt
@@ -55,7 +56,8 @@ def fourierTesting():
     plt.show()
 
 def wavyPfrontDemo():
-    seedList=np.linspace(0,np.pi/2,128)
+    # seedList=np.linspace(0,np.pi/2,128)
+    seedList=np.random.rand(10)*np.pi/4
     x=np.cos(seedList)
     y=np.sin(seedList)
     data=np.vstack((x,y)).T
@@ -108,23 +110,16 @@ def wavyPfrontDemo():
 
 def dim3hypersphereTesting():
     # demo finding the mean plane in 3d
+    numsmpl=30**2
     dummyTest3d = concaveHypersphere(numsmpl)
     run3danalysis(dummyTest3d)
-    mp=MeanPlane(dummyTest3d)
+    # xx,yy=map(lambda ar: ar.flatten(), np.meshgrid(np.linspace(0,1,128),np.linspace(0,1,128)))
+    # zz=np.sin(2*np.pi*xx)*np.cos(2*np.pi*yy)
 
-    xx,yy=map(lambda ar: ar.flatten(), np.meshgrid(np.linspace(0,1,128),np.linspace(0,1,128)))
-    zz=np.sin(2*np.pi*xx)*np.cos(2*np.pi*yy)
-
-    fa=SlowFourierAnalyzer(zz,np.vstack((xx,yy)).T)
-    fa=SlowFourierAnalyzer.fromMeanPlane(mp)
-    plt.figure()
-    spectral2dPowerPlot(fa)
-    plt.show()
-
-    plt.figure()
-    spectral2dPowerImage(fa)
-    plt.show()
+    # fa=SlowFourierAnalyzer(zz,np.vstack((xx,yy)).T)
+    # fa=SlowFourierAnalyzer.fromMeanPlane(mp)
 
 if __name__=='__main__':
     # fourierTesting()
-    wavyPfrontDemo()
+    # wavyPfrontDemo()
+    dim3hypersphereTesting()
