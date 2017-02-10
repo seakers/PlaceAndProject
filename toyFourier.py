@@ -55,16 +55,17 @@ def fourierTesting():
     plt.legend()
     plt.show()
 
-def wavyPfrontDemo():
+def circlePfrontDemo():
     # seedList=np.linspace(0,np.pi/2,128)
-    seedList=np.random.rand(10)*np.pi/4
+    seedList=np.sort(np.random.rand(64)*np.pi/2)
+    np.savetxt('quarterCircleSeed.csv',seedList)
     x=np.cos(seedList)
     y=np.sin(seedList)
     data=np.vstack((x,y)).T
     mp,fa=run2danalysis(data,saveFigsPrepend='circleDemo')
 
     plt.figure()
-    plt.plot(mp.inputInPlane,mp.inputResidual)
+    plt.plot(mp.inputInPlane,mp.inputResidual,'.')
     plt.xlabel('projected inputs in the plane')
     plt.ylabel('residual to the input location from the plane')
     plt.savefig('circleDemo_residualPlot.png')
@@ -76,6 +77,7 @@ def wavyPfrontDemo():
     plt.savefig('circleDemo_meanPlane.png')
     plt.show()
 
+def wavyPfrontDemo():
     x=np.concatenate((np.linspace(0,0.5,32),0.5*np.ones(32)))*2
     y=np.concatenate((np.ones(32),    np.linspace(1,0,32)))
     data=np.vstack((x,y)).T
@@ -92,8 +94,8 @@ def wavyPfrontDemo():
     plt.savefig('singleBoxDemo_meanPlane.png')
     plt.show()
 
-    x=np.concatenate((np.linspace(0,0.5,32),0.5*np.ones(32),      np.linspace(0.5,1,32),np.ones(32)))
-    y=np.concatenate((np.ones(32),          np.linspace(1,0.5,32),0.5*np.ones(32),      np.linspace(0.5,0,32)))
+    x=np.concatenate((np.linspace(0,0.25,32),0.25*np.ones(32),np.linspace(0.25,0.5,32),0.5*np.ones(32),np.linspace(0.5,0.75,32),0.75*np.ones(32),np.linspace(0.75,1,32),np.ones(32)))
+    y=np.concatenate((np.ones(32),np.linspace(1,0.75,32),0.75*np.ones(32),np.linspace(0.75,0.5,32), 0.5*np.ones(32), np.linspace(0.5,0.25,32),0.25*np.ones(32),np.linspace(0.25,0,32)))
     data=np.vstack((x,y)).T
     mp,fa=run2danalysis(data,saveFigsPrepend='boxyDemo')
     plt.figure()
@@ -112,7 +114,8 @@ def dim3hypersphereTesting():
     # demo finding the mean plane in 3d
     numsmpl=30**2
     dummyTest3d = concaveHypersphere(numsmpl)
-    run3danalysis(dummyTest3d)
+    np.savetxt('concaveHyperspherePoints.csv',dummyTest3d)
+    run3danalysis(dummyTest3d,saveFigsPrepend='3dhypersphere')
     # xx,yy=map(lambda ar: ar.flatten(), np.meshgrid(np.linspace(0,1,128),np.linspace(0,1,128)))
     # zz=np.sin(2*np.pi*xx)*np.cos(2*np.pi*yy)
 
@@ -122,4 +125,5 @@ def dim3hypersphereTesting():
 if __name__=='__main__':
     # fourierTesting()
     # wavyPfrontDemo()
+    # circlePfrontDemo()
     dim3hypersphereTesting()

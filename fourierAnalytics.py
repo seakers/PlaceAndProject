@@ -40,7 +40,7 @@ class SlowFourierAnalyzer():
                 # frequenciesToEval=__oneFreqRange(ranges,pointHeight.size)
                 # frequenciesToEval=1/(ranges)*np.arange(1,incToEven(pointHeight.size)/2)
             else:
-                frequenciesToEval=np.array(list(map(lambda r, n: 1/r * np.concatenate((np.arange(1,n//2),-np.arange(1,incToEven(n)/2))), ranges, frequencyDivisions)))
+                frequenciesToEval=np.array(list(map(lambda r, n: 1/r * np.concatenate((np.arange(1,n//2+1),-np.arange(1,incToEven(n)/2+1)[::-1])), ranges, frequencyDivisions)))
                 # frequenciesToEval=np.dot(1/(ranges[:,np.newaxis]),np.concatenate((np.arange(1,pointHeight.size//2),-np.arange(1,incToEven(pointHeight.size)/2)[::-1]))[np.newaxis,:])
                 # frequenciesToEval=np.array(list(map(__oneFreqRange,ranges,it.repeat(pointHeight.size))))
                 # frequenciesToEval=np.dot(1/(ranges[:,np.newaxis]),np.arange(1,incToEven(pointHeight.size)/2)[np.newaxis,:])
@@ -79,10 +79,10 @@ class SlowFourierAnalyzer():
 
         :return:
         """
-        return filteredSpectrum(self.inputFilters,self.spectralFilters,self.fftFreqs, self.pointLocation, self.pointHeight)
+        return self.filteredSpectrum()
 
     def filteredSpectrum(self):
-        return self.spectrum
+        return filteredSpectrum(self.inputFilters,self.spectralFilters,self.fftFreqs, self.pointLocation, self.pointHeight)
 
     def trueSpectrum(self):
         return forwardTransform(self.fftFreqs, self.pointLocation, self.pointHeight)
@@ -131,8 +131,8 @@ def forwardTransform(freqs, locations, functionVals):
     return np.dot(functionVals,np.exp(exponentTerm)).reshape(numFreqs)
 
 def stdNumPerSide(dataShape):
-        nthRoot=int(np.ceil(dataShape[0]**(1/dataShape[1])))
-        return (nthRoot,)*dataShape[1]
+    nthRoot=int(np.ceil(dataShape[0]**(1/dataShape[1])))
+    return (nthRoot,)*dataShape[1]
 
 def interpolateErr(locations, values, numPerSide=None):
     if numPerSide is None:
@@ -233,7 +233,8 @@ class FourierAnalyzer():
     def __interpAndFFT1d(self, freqs,locations, functionVals):
         interpolator=sp.interpolate.interp1d(locations, functionVals, kind='nearest')
         interpLocs=np.linspace(np.min(locations), np.max(locations), len(locations))
-        return np.fft.fft(interpLocs)
+        interpedVals=interpolator(interpLocs)
+        return np.fft.fft(interpedVals)[1:]
 
     @property
     def spectrum(self):
@@ -243,12 +244,13 @@ class FourierAnalyzer():
         return self.filteredSpectrum()
 
     def trueSpectrum(self):
-        return self.__interpAndFFT(self.fftFreqs, self.pointLocation, self.pointHeight)
+        if len(self.pointLocation.shape)>1:
+            return self.__interpAndFFT(self.fftFreqs,self.pointLocation,self.pointHeight)
+        else:
+            return self.__interpAndFFT1d(self.fftFreqs,self.pointLocation,self.pointHeight)
 
     def filteredSpectrum(self):
         """
-
-
         :return:
         """
         if len(self.pointLocation.shape)>1:
@@ -259,9 +261,12 @@ class FourierAnalyzer():
     @property
     def fftFreqs(self):
         """returns the frequencies at which the spectrum is evaluated"""
-        nps=stdNumPerSide(self.pointLocation.shape)
-        spacing=list(map(lambda lo, hi, n: (hi-lo)/(n-1), np.min(self.pointLocation, axis=0), np.max(self.pointLocation, axis=0), nps))
-        return np.array([np.fft.fftfreq(n,d=space) for n,space in zip(nps,spacing)])
+        if len(self.pointLocation.shape)>1:
+            nps=stdNumPerSide(self.pointLocation.shape)
+            spacing=list(map(lambda lo, hi, n: (hi-lo)/(n-1), np.min(self.pointLocation, axis=0), np.max(self.pointLocation, axis=0), nps))
+            return np.array([np.fft.fftfreq(n,d=space)[1:] for n,space in zip(nps,spacing)])
+        else:
+            return np.fft.fftfreq(len(self.pointHeight),d=np.ptp(self.pointLocation)/len(self.pointHeight))[1:]
 
     def reconstruction(self,locations=None):
         """
@@ -271,6 +276,8 @@ class FourierAnalyzer():
         """
         if locations is None:
             locations=self.pointLocation
+        # interpolator=sp.interpolate.interp1d()
+        # return np.fft.ifft(self.spectrum)
         return reconstruction(self.fftFreqs,locations,self.filteredSpectrum(),self.pointHeight.size)
 
     def avgSqrdReconstructionError(self):
@@ -282,16 +289,15 @@ class FourierAnalyzer():
         return FourierAnalyzer(meanPlane.inputResidual,meanPlane.inputInPlane)
 
 def spectral1dPowerPlot(fourierAnalyzerObj):
-    spectralPower=np.abs(fourierAnalyzerObj.spectrum)**2
-    print(spectralPower)
-    plt.plot(fourierAnalyzerObj.fftFreqs,spectralPower,'.-')
+    spectralPower=np.abs(np.fft.fftshift(fourierAnalyzerObj.spectrum))**2
+    plt.plot(np.fft.fftshift(fourierAnalyzerObj.fftFreqs),spectralPower,'.-')
     plt.xlabel('frequency')
     plt.ylabel('square power')
 
 def spectral1dPhasePlot(fourierAnalyzerObj):
-    spectralPhase=np.angle(fourierAnalyzerObj.spectrum)
-    print(spectralPhase)
-    plt.plot(fourierAnalyzerObj.fftFreqs,spectralPhase,'.-')
+    spectralPhase=np.angle(np.fft.fftshift(fourierAnalyzerObj.spectrum))
+    # print(spectralPhase)
+    plt.plot(np.fft.fftshift(fourierAnalyzerObj.fftFreqs),spectralPhase,'.-')
     plt.xlabel('frequency')
     plt.ylabel('phase (radians)')
 
@@ -301,12 +307,25 @@ def spectral2dPowerPlot(fourierAnalyzerObj):
     ax=prep3dAxes()
     ax.plot_surface(freqProd[0],freqProd[1],spectralPower)
 
+def numpyToPrettyStr(numpyArr):
+    tickFormat=lambda x: "%.4f" % x
+    return list(map(tickFormat, numpyArr))
+
+def multiDimNumpyToPrettyStr(numpyArr):
+    formatStrBuilder="( "+", ".join(("%.3f",)*numpyArr.shape[1])+")"
+    tickFormat=lambda x: formatStrBuilder % tuple(x)
+    return list(map(tickFormat, numpyArr))
+
 def spectral2dPowerImage(fourierAnalyzerObj):
     spectralPower=np.abs(fourierAnalyzerObj.spectrum)**2
-    plt.imshow(spectralPower,cmap='Greys',interpolation='nearest')
+    # plt.imshow(np.fft.fftshift(spectralPower),cmap='Greys',interpolation='nearest')
+    plt.imshow(np.fft.fftshift(spectralPower),cmap='Greys',interpolation='nearest')
     plt.colorbar()
-    # plt.xticks(fourierAnalyzerObj.fftFreqs[0])
-    # plt.yticks(fourierAnalyzerObj.fftFreqs[1])
+    shiftedFFTF=np.fft.fftshift(fourierAnalyzerObj.fftFreqs,axes=1)
+    plt.xticks(np.arange(len(shiftedFFTF[0])), numpyToPrettyStr(shiftedFFTF[0]), rotation=60)
+    plt.yticks(np.arange(len(shiftedFFTF[1])), numpyToPrettyStr(shiftedFFTF[1]))
+    # plt.xticks(np.arange(len(fourierAnalyzerObj.fftFreqs[0])), fourierAnalyzerObj.fftFreqs[0], rotation=60)
+    # plt.yticks(np.arange(len(fourierAnalyzerObj.fftFreqs[1])), fourierAnalyzerObj.fftFreqs[1])
 
 def approximationPlot2d(meanPlane, analyzer):
     dummyTest2d=meanPlane.paretoSamples
@@ -316,7 +335,7 @@ def approximationPlot2d(meanPlane, analyzer):
     plt.plot(mp.inputProjections[:,0],mp.inputProjections[:,1],'.',label='ProjectedLocations')
     spectralCurveInPlane=np.linspace(mp.inputInPlane.min(),mp.inputInPlane.max(),10*mp.inputInPlane.size)
     planeCurve=np.dot(spectralCurveInPlane[:,np.newaxis],np.squeeze(mp.basisVects)[np.newaxis,:])+mp.meanPoint[np.newaxis,:]
-    plt.plot(planeCurve[:,0],planeCurve[:,1])
+    plt.plot(planeCurve[:,0],planeCurve[:,1],label='mean plane')
 
     filteredCorrection=analyzer.reconstruction()
     spectralCurveOutOfPlane=analyzer.reconstruction(spectralCurveInPlane)
@@ -327,7 +346,7 @@ def approximationPlot2d(meanPlane, analyzer):
     # plt.plot(corrected[:,0],corrected[:,1],'.',label='spectral representation of inputs')
 
     plt.axis('equal')
-    plt.legend()
+    plt.legend(loc='best')
 
 def plot3dErr(locations, values):
     pltVals=interpolateErr(locations,values)
@@ -364,13 +383,31 @@ def run2danalysis(data,objHeaders=None,saveFigsPrepend=None):
     # fa.addSpectralFilter(spectralGaussBlur)
     # sm=FourierSummarizer(4)
     # fa.addSpectralFilter(sm)
-    fa=FourierSummarizerAnalyzer.fromMeanPlane(mp,freqsToKeep=3)
+    fa=FourierSummarizerAnalyzer.fromMeanPlane(mp,freqsToKeep=2)
+    # fa=FourierSummarizerAnalyzer.fromMeanPlane(mp,freqsToKeep=1000)
     fa.report()
+    if saveFigsPrepend is not None:
+        fa.report(saveFigsPrepend+'_report.csv')
 
     plt.figure()
     spectral1dPowerPlot(fa)
     if saveFigsPrepend is not None:
         plt.savefig(saveFigsPrepend+'_spectralPower.png',bbox_inches='tight')
+    plt.show()
+
+    plt.figure()
+    spectral1dPhasePlot(fa)
+    if saveFigsPrepend is not None:
+        plt.savefig(saveFigsPrepend+'_spectralPhase.png',bbox_inches='tight')
+    plt.show()
+
+    plt.figure()
+    spectralPower=np.abs(np.fft.fftshift(fa.trueSpectrum()))**2
+    plt.plot(np.fft.fftshift(fa.fftFreqs),spectralPower,'.-')
+    plt.xlabel('frequency')
+    plt.ylabel('square power')
+    if saveFigsPrepend is not None:
+        plt.savefig(saveFigsPrepend+'_trueSpectralPower.png',bbox_inches='tight')
     plt.show()
 
     plt.figure()
@@ -433,6 +470,12 @@ def run3danalysis(data,objHeaders=None,saveFigsPrepend=None):
     if saveFigsPrepend is not None:
         fa.report(saveFigsPrepend+'_report.csv')
 
+    plt.figure()
+    fa.powerDeclineReport()
+    if saveFigsPrepend is not None:
+        plt.savefig(saveFigsPrepend+'_powerDeclineReport.png',bbox_inches='tight')
+    plt.show()
+
 def approximationPlot3d(mp,fa):
     grid_x,grid_y=np.meshgrid(np.linspace(np.min(mp.inputInPlane[:,0]),np.max(mp.inputInPlane[:,0])), np.linspace(np.min(mp.inputInPlane[:,1]),np.max(mp.inputInPlane[:,1])))
     points=np.vstack((grid_x.flatten(),grid_y.flatten())).T
@@ -457,8 +500,16 @@ def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None):
         plt.savefig(saveFigsPrepend+'_tradeRatios.png',bbox_inches='tight')
     plt.show()
 
-    fa=FourierSummarizerAnalyzer.fromMeanPlane(mp,5**data.shape[1])
+    fa=FourierSummarizerAnalyzer.fromMeanPlane(mp,2**data.shape[1])
     fa.report()
+    if saveFigsPrepend is not None:
+        fa.report(saveFigsPrepend+'_report.csv')
+
+    plt.figure()
+    fa.powerDeclineReport()
+    if saveFigsPrepend is not None:
+        plt.savefig(saveFigsPrepend+'_powerDeclinePlot.png',bbox_inches='tight')
+    plt.show()
 
 def spectralGaussBlur(freqs,spectrum,bandwidth=1):
     # kernel=np.exp(-(freqs/bandwidth)**2/2)/np.sqrt(2*np.pi)/bandwidth
@@ -535,6 +586,17 @@ class FourierSummarizer():
                 d['number of humps dim '+str(i)]=humpArr
         return pd.DataFrame(d)
 
+    def powerDeclineReport(self):
+        # plt.fill(np.arange(len(self.freqSpectra)),np.abs(self.freqSpectra)**2)
+        # plt.plot(np.arange(len(self.freqSpectra)),np.abs(self.freqSpectra)**2)
+        plt.bar(np.arange(len(self.freqSpectra)),np.abs(self.freqSpectra)**2)
+        if len(self.freqsTaken.shape)>1:
+            plt.xticks(range(len(self.freqsTaken)),multiDimNumpyToPrettyStr(self.freqsTaken), rotation=75)
+        else:
+            plt.xticks(range(len(self.freqsTaken)),numpyToPrettyStr(self.freqsTaken), rotation=75)
+        plt.ylabel('squared power of component')
+        plt.xlabel('representative frequency')
+
     def report(self, tofile=None):
         if tofile is None:
             print(self._toDataFrame())
@@ -545,8 +607,8 @@ class FourierSummarizer():
             with open(tofile,'a') as f:
                 f.writelines(('captured power: '+str(np.sum(np.abs(self.freqSpectra)**2)), 'lost power: '+str(self.lostPower)))
 
-# class FourierSummarizerAnalyzer(SlowFourierAnalyzer):
-class FourierSummarizerAnalyzer(FourierAnalyzer):
+class FourierSummarizerAnalyzer(SlowFourierAnalyzer):
+# class FourierSummarizerAnalyzer(FourierAnalyzer): # somehow phase is off or somethign in the really easy problems
     def __init__(self,pointHeight,pointLocation,frequenciesToEval=None,freqsToKeep=5):
         super(FourierSummarizerAnalyzer, self).__init__(pointHeight,pointLocation,frequenciesToEval)
         self.summarizer=FourierSummarizer(freqsToKeep,wavelenth=np.ptp(self.pointLocation,axis=0))
@@ -558,6 +620,13 @@ class FourierSummarizerAnalyzer(FourierAnalyzer):
         except(InitializeRunFailError):
             self.filteredSpectrum() # hack to force computation
             self.summarizer.report(tofile)
+
+    def powerDeclineReport(self):
+        try:
+            self.summarizer.powerDeclineReport()
+        except(InitializeRunFailError):
+            self.filteredSpectrum() # hack to force computation
+            self.summarizer.powerDeclineReport()
 
     @classmethod
     def fromMeanPlane(cls,meanPlane,freqsToKeep=5):
@@ -574,3 +643,6 @@ if __name__=="__main__":
 
     # run2danalysis(dummyTest2d,saveFigsPrepend='testSave')
     run2danalysis(dummyTest2d)
+
+# TODO: Report basis vector directions for interpretign direction in fourier analysis
+# TODO: make sure normal vector points in one particular direction

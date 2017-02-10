@@ -5,6 +5,7 @@ import pandas as pd
 import os
 import functools as ft
 import operator as op
+import warnings as w
 
 def anyCompetion(sample):
     ranks=np.argsort(sample, axis=0)
@@ -59,6 +60,10 @@ def runProblemAnalysis(probName,metricsFile,preferenceFile):
     sameDirVals=dataRead.values*multiplier[np.newaxis,:]
     normalizedData=(sameDirVals-sameDirVals.min(axis=0)[np.newaxis,:])/np.ptp(sameDirVals,axis=0)[np.newaxis,:]
 
+    meanCoop=covarCompete(normalizedData)
+    if np.any(meanCoop):
+        w.warn('detected average cooperation in problem: '+probName)
+        printCooperating(meanCoop, headers)
     runAnalysisDict=[run2danalysis,run3danalysis,runHighDimAnalysis]
     runAnalysisDict[min(len(headers)-2,2)](normalizedData,headers,probName)
     # runAnalysisDict[min(len(headers)-2,2)](normalizedData,headers,None) # for testing
@@ -66,6 +71,7 @@ def runProblemAnalysis(probName,metricsFile,preferenceFile):
 if __name__=="__main__":
     metricsFiles=list(filter(lambda f: f[-8:]=='_met.csv', os.listdir()))
     # metricsFiles=['continuous6obj_met.csv',]
+    # metricsFiles=['EOSSdownSel_met.csv',]
     for metricsFile in metricsFiles:
         if os.path.isfile(metricsFile):
             pathParts=os.path.split(metricsFile)
