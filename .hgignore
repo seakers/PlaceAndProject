@@ -1,0 +1,4 @@
+syntax: glob
+**.png
+**_report.csv
+**~ 
