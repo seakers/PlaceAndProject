@@ -17,9 +17,7 @@ class MeanPlane():
         self.paretoSamples=paretoSamples
         self._centeredSamples=paretoSamples-self.meanPoint
         self.embedDim=paretoSamples.shape[1]
-        self.__U, self.__S, self._V=np.linalg.svd(self._centeredSamples)
-        if np.any(self.__S==0):
-            raise InvalidValueError
+        self._U, self._S, self._V=np.linalg.svd(self._centeredSamples)
 
     @property
     def normalVect(self):
@@ -69,6 +67,17 @@ class MeanPlane():
         :return: returns
         """
         return np.tile(self.normalVect[:,np.newaxis],(1,len(self.normalVect)))/np.tile(self.normalVect[np.newaxis,:],(len(self.normalVect),1))
+
+class ParetoMeanPlane(MeanPlane):
+    def __init__(self,paretoSamples):
+        super(ParetoMeanPlane,self).__init__(paretoSamples)
+        if np.all(self.normalVect<0):
+            self._V*=-1 # default to pointing out--positive
+            self._U*=-1
+        elif np.any(self.normalVect<0): # if not all negative or positive
+            raise InvalidValueError('plane doesn''t point toward or away from ideal point')
+        if np.any(self._S==0):
+            raise InvalidValueError('plane is degenerate')
 
 class DimTooHighError(Exception):
     pass
