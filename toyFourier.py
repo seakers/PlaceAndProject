@@ -11,6 +11,23 @@ from meanPlane import *
 from common import *
 from fourierAnalytics import *
 
+def unbalanced():
+    x=np.concatenate((np.linspace(0,0.5,32),0.5*np.ones(32)))
+    y=np.concatenate((np.ones(32),    np.linspace(1,0,32)))
+    data=np.vstack((x,y)).T
+    mp,fa=run2danalysis(data,saveFigsPrepend='unevenBoxDemo',freqsToKeep=100)
+    plt.figure()
+    plt.plot(mp.inputInPlane,mp.inputResidual)
+    plt.xlabel('projected inputs in the plane')
+    plt.ylabel('residual to the input location from the plane')
+    plt.savefig('singleBoxyDemo_residualPlot.png')
+    plt.show()
+    plt.figure()
+    mp.draw2dMeanPlane()
+    plt.axis('equal')
+    plt.savefig('singleBoxDemo_meanPlane.png')
+    plt.show()
+
 def fourierTesting():
     # fa = SlowFourierAnalyzer(np.sin(np.linspace(0,2*np.pi,10)),np.linspace(0,10,10)) # what the FFT sees:
     # x=np.linspace(0,2*np.pi,10)
@@ -126,4 +143,5 @@ if __name__=='__main__':
     # fourierTesting()
     # wavyPfrontDemo()
     # circlePfrontDemo()
-    dim3hypersphereTesting()
+    # dim3hypersphereTesting()
+    unbalanced()

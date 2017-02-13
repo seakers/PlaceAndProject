@@ -353,7 +353,7 @@ def plot3dErr(locations, values):
     plt.imshow(pltVals, origin='lower',extent=(np.min(locations[:,0]),np.max(locations[:,0]), np.min(locations[:,1]),np.max(locations[:,1])))
     plt.plot(locations[:,0],locations[:,1], 'k.')
 
-def run2danalysis(data,objHeaders=None,saveFigsPrepend=None):
+def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=2):
     """
 
     standard set of plots generated for 2-objective problems
@@ -383,7 +383,7 @@ def run2danalysis(data,objHeaders=None,saveFigsPrepend=None):
     # fa.addSpectralFilter(spectralGaussBlur)
     # sm=FourierSummarizer(4)
     # fa.addSpectralFilter(sm)
-    fa=FourierSummarizerAnalyzer.fromMeanPlane(mp,freqsToKeep=2)
+    fa=FourierSummarizerAnalyzer.fromMeanPlane(mp,freqsToKeep)
     # fa=FourierSummarizerAnalyzer.fromMeanPlane(mp,freqsToKeep=1000)
     fa.report()
     if saveFigsPrepend is not None:
