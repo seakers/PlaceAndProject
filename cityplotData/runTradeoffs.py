@@ -7,6 +7,8 @@ import functools as ft
 import operator as op
 import warnings as w
 
+import meanPlane as mp
+
 def anyCompetion(sample):
     ranks=np.argsort(sample, axis=0)
     ret=np.zeros((sample.shape[1],sample.shape[1]), dtype=bool)
@@ -65,12 +67,17 @@ def runProblemAnalysis(probName,metricsFile,preferenceFile):
         w.warn('detected average cooperation in problem: '+probName)
         printCooperating(meanCoop, headers)
     runAnalysisDict=[run2danalysis,run3danalysis,runHighDimAnalysis]
-    runAnalysisDict[min(len(headers)-2,2)](normalizedData,headers,probName)
+    try:
+        runAnalysisDict[min(len(headers)-2,2)](normalizedData,headers,probName,displayFigs=False)
+    except mp.NotPointingToOriginError as valErr:
+        # print('not pointing to origin: valErr')
+        w.warn('not pointing to origin:'+str(valErr))
     # runAnalysisDict[min(len(headers)-2,2)](normalizedData,headers,None) # for testing
 
 if __name__=="__main__":
     metricsFiles=list(filter(lambda f: f[-8:]=='_met.csv', os.listdir()))
     # metricsFiles=['continuous6obj_met.csv',]
+    # metricsFiles=['EOSSdownSel3_met.csv',]
     # metricsFiles=['EOSSdownSel_met.csv',]
     for metricsFile in metricsFiles:
         if os.path.isfile(metricsFile):

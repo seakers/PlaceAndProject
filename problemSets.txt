@@ -1,0 +1,3 @@
+unbalanced L shaped pareto front (see toyFourier). I think the solution is to use a slightly different basis set: 1/2 wavelength instead of just full wavelengths
+Interpolating Fourier Series generates nonsense.
+REal Datasets fail to have trade in all objectives...yet are pareto optimal.
