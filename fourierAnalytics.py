@@ -97,6 +97,11 @@ class SlowFourierAnalyzer():
             locations=self.pointLocation
         return reconstruction(self.fftFreqs,locations,self.filteredSpectrum(),self.pointHeight.size)
 
+    def reconstructDerivative(self,locations=None):
+        if locations is None:
+            locations=self.pointLocation
+        return reconstructDerivative(self.fftFreqs,locations, self.spectrum, self.pointHeight.size)
+
     def avgSqrdReconstructionError(self):
         return np.mean((self.reconstruction()-self.pointHeight)**2)
 
@@ -168,6 +173,9 @@ def reconstruction(freqs, locations, spectrum,numPts):
         pointLoc=locations
     exponentTerm=2*np.pi*1j*np.dot(freqProd.T,pointLoc.T)
     return np.squeeze(np.dot(spectrum,np.exp(exponentTerm)))/numPts
+
+def reconstructDerivative(freqs, locations, spectrum, numPts):
+    return np.array([reconstruction(freqs, locations, 2*np.pi*1j*thisFreq*spectrum, numPts) for thisFreq in freqs.flatten()]).T
 
 def orderLocations1d(pointLocations):
     """
