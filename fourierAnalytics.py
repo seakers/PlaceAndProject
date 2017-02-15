@@ -353,7 +353,7 @@ def plot3dErr(locations, values):
     plt.imshow(pltVals, origin='lower',extent=(np.min(locations[:,0]),np.max(locations[:,0]), np.min(locations[:,1]),np.max(locations[:,1])))
     plt.plot(locations[:,0],locations[:,1], 'k.')
 
-def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=2):
+def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=2, displayFigs=True):
     """
 
     standard set of plots generated for 2-objective problems
@@ -378,6 +378,8 @@ def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=2):
     if saveFigsPrepend is not None:
         plt.savefig(saveFigsPrepend+'_tradeRatios.png',bbox_inches='tight')
     plt.show()
+    if not displayFigs:
+        plt.close('all')
 
     # fa=SlowFourierAnalyzer.fromMeanPlane(mp)
     # fa.addSpectralFilter(spectralGaussBlur)
@@ -394,12 +396,16 @@ def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=2):
     if saveFigsPrepend is not None:
         plt.savefig(saveFigsPrepend+'_spectralPower.png',bbox_inches='tight')
     plt.show()
+    if not displayFigs:
+        plt.close('all')
 
     plt.figure()
     spectral1dPhasePlot(fa)
     if saveFigsPrepend is not None:
         plt.savefig(saveFigsPrepend+'_spectralPhase.png',bbox_inches='tight')
     plt.show()
+    if not displayFigs:
+        plt.close('all')
 
     plt.figure()
     spectralPower=np.abs(np.fft.fftshift(fa.trueSpectrum()))**2
@@ -409,15 +415,19 @@ def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=2):
     if saveFigsPrepend is not None:
         plt.savefig(saveFigsPrepend+'_trueSpectralPower.png',bbox_inches='tight')
     plt.show()
+    if not displayFigs:
+        plt.close('all')
 
     plt.figure()
     approximationPlot2d(mp, fa)
     if saveFigsPrepend is not None:
         plt.savefig(saveFigsPrepend+'_reverseTransform.png',bbox_inches='tight')
     plt.show()
+    if not displayFigs:
+        plt.close('all')
     return (mp,fa)
 
-def run3danalysis(data,objHeaders=None,saveFigsPrepend=None):
+def run3danalysis(data,objHeaders=None,saveFigsPrepend=None,displayFigs=True):
     """
     standard set of plots generated for 2-objective problems
     :param data: designs to plot. each row is a design and each column is an objective
@@ -433,6 +443,8 @@ def run3danalysis(data,objHeaders=None,saveFigsPrepend=None):
     if saveFigsPrepend is not None:
         plt.savefig(saveFigsPrepend+'_meanPlane.png',bbox_inches='tight')
     plt.show()
+    if not displayFigs:
+        plt.close('all')
 
     plt.figure()
     plotLogTradeRatios(mp, objHeaders)
@@ -440,6 +452,8 @@ def run3danalysis(data,objHeaders=None,saveFigsPrepend=None):
     if saveFigsPrepend is not None:
         plt.savefig(saveFigsPrepend+'_tradeRatios.png',bbox_inches='tight')
     plt.show()
+    if not displayFigs:
+        plt.close('all')
 
     fa=FourierSummarizerAnalyzer.fromMeanPlane(mp,freqsToKeep=5**2)
     plt.figure()
@@ -447,24 +461,32 @@ def run3danalysis(data,objHeaders=None,saveFigsPrepend=None):
     if saveFigsPrepend is not None:
         plt.savefig(saveFigsPrepend+'_spectralPower.png',bbox_inches='tight')
     plt.show()
+    if not displayFigs:
+        plt.close('all')
 
     plt.figure()
     spectral2dPowerPlot(fa)
     if saveFigsPrepend is not None:
         plt.savefig(saveFigsPrepend+'_spectralPower3d.png',bbox_inches='tight')
     plt.show()
+    if not displayFigs:
+        plt.close('all')
 
     plt.figure()
     approximationPlot3d(mp, fa) # not yet implemented
     if saveFigsPrepend is not None:
        plt.savefig(saveFigsPrepend+'_reverseTransform.png',bbox_inches='tight')
     plt.show()
+    if not displayFigs:
+        plt.close('all')
 
     plt.figure()
     plot3dErr(mp.inputInPlane, mp.inputResidual)
     if saveFigsPrepend is not None:
         plt.savefig(saveFigsPrepend+'_errorPlot.png',bbox_inches='tight')
     plt.show()
+    if not displayFigs:
+        plt.close('all')
 
     fa.report()
     if saveFigsPrepend is not None:
@@ -475,6 +497,8 @@ def run3danalysis(data,objHeaders=None,saveFigsPrepend=None):
     if saveFigsPrepend is not None:
         plt.savefig(saveFigsPrepend+'_powerDeclineReport.png',bbox_inches='tight')
     plt.show()
+    if not displayFigs:
+        plt.close('all')
 
 def approximationPlot3d(mp,fa):
     grid_x,grid_y=np.meshgrid(np.linspace(np.min(mp.inputInPlane[:,0]),np.max(mp.inputInPlane[:,0])), np.linspace(np.min(mp.inputInPlane[:,1]),np.max(mp.inputInPlane[:,1])))
@@ -483,7 +507,7 @@ def approximationPlot3d(mp,fa):
     plt.imshow(recons, origin='lower',extent=(np.min(mp.inputInPlane[:,0]),np.max(mp.inputInPlane[:,0]), np.min(mp.inputInPlane[:,1]),np.max(mp.inputInPlane[:,1])))
     plt.plot(mp.inputInPlane[:,0],mp.inputInPlane[:,1],'k.')
 
-def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None):
+def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None,displayFigs=True):
     """
     standard set of plots generated for 2-objective problems
     :param data: designs to plot. each row is a design and each column is an objective
@@ -499,6 +523,8 @@ def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None):
     if saveFigsPrepend is not None:
         plt.savefig(saveFigsPrepend+'_tradeRatios.png',bbox_inches='tight')
     plt.show()
+    if not displayFigs:
+        plt.close('all')
 
     fa=FourierSummarizerAnalyzer.fromMeanPlane(mp,2**data.shape[1])
     fa.report()
@@ -510,6 +536,8 @@ def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None):
     if saveFigsPrepend is not None:
         plt.savefig(saveFigsPrepend+'_powerDeclinePlot.png',bbox_inches='tight')
     plt.show()
+    if not displayFigs:
+        plt.close('all')
 
 def spectralGaussBlur(freqs,spectrum,bandwidth=1):
     # kernel=np.exp(-(freqs/bandwidth)**2/2)/np.sqrt(2*np.pi)/bandwidth

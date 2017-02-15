@@ -8,7 +8,7 @@ import functools as ft
 
 from common import *
 
-class InvalidValueError(Exception):
+class MeanPlaneError(Exception):
     pass
 
 class MeanPlane():
@@ -69,6 +69,12 @@ class MeanPlane():
         """
         return np.tile(self.normalVect[:,np.newaxis],(1,len(self.normalVect)))/np.tile(self.normalVect[np.newaxis,:],(len(self.normalVect),1))
 
+class NotPointingToOriginError(MeanPlaneError):
+    pass
+
+class DegeneratePlaneError(MeanPlaneError):
+    pass
+
 class ParetoMeanPlane(MeanPlane):
     def __init__(self,paretoSamples):
         super(ParetoMeanPlane,self).__init__(paretoSamples)
@@ -76,14 +82,15 @@ class ParetoMeanPlane(MeanPlane):
             self._V*=-1 # default to pointing out--positive
             self._U*=-1
         elif np.any(self.normalVect<0): # if not all negative or positive
-            raise InvalidValueError('plane doesn''t point toward or away from ideal point')
+            raise NotPointingToOriginError(self.normalVect)
         if np.any(self._S==0):
-            raise InvalidValueError('plane is degenerate')
+            raise DegeneratePlaneError
 
 class DimTooHighError(Exception):
     pass
 
-class lowDimMeanPlane(MeanPlane):
+# class lowDimMeanPlane(MeanPlane):
+class lowDimMeanPlane(ParetoMeanPlane):
     """
     additional methods and properties enabled by having a mean plane in 2d or 3d. really a convienence for plotting.
     """
