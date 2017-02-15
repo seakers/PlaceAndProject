@@ -3,6 +3,11 @@ import matplotlib.pyplot as plt
 from numbers import Number
 from mpl_toolkits.mplot3d import Axes3D #it's tempting. don't delete.
 
+# on caching:
+# https://wiki.python.org/moin/PythonDecoratorLibrary#Memoize
+# https://www.fullstackpython.com/caching.html
+# http://book.pythontips.com/en/latest/function_caching.html
+
 def concaveHypersphere(numTest):
     """returns a set of random points on the hypersphere in the all positive quadrant"""
     np.random.seed(2130935987)

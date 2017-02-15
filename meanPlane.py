@@ -44,6 +44,7 @@ class MeanPlane():
     def inputProjections(self):
         """
         :return: the locations of the input points in the mean plane but in the orginal coordinate system with the mean point added. Give a set of points in the plane
+        #WARNING: I think this is faulty
         """
         return np.dot(self._centeredSamples,self.projectionMat)+self.meanPoint[np.newaxis,:]
 
@@ -130,26 +131,3 @@ class lowDimMeanPlane(MeanPlane):
         """
         raise NotImplementedError
 
-def plotTradeRatios(mp, objLabels,preconditioner=None):
-    """
-    plots ratios of components of the plane. each box represents the value of the objectives trading between each other when restricted to the plane
-    :param mp: a mean plane object to plot
-    :return:
-    """
-
-    if preconditioner is None:
-        tr=mp.tradeRatios
-    else:
-        tr=preconditioner(mp.tradeRatios)
-
-    # reorder elements
-    reorderArr=np.argsort(np.mean(tr,axis=0))
-    trr=tr[:,reorderArr]
-    trr=trr[reorderArr,:]
-    objLabels_reorder=list(map(lambda i: objLabels[i], range(len(objLabels))))
-    plt.imshow(trr,cmap='Greys',interpolation='nearest')
-    plt.colorbar()
-    plt.xticks(range(len(objLabels_reorder)),objLabels_reorder)
-    plt.yticks(range(len(objLabels_reorder)),objLabels_reorder)
-logAbs=lambda a: np.log10(np.abs(a))
-plotLogTradeRatios=ft.partial(plotTradeRatios,preconditioner=logAbs)
