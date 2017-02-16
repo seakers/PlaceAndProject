@@ -143,5 +143,5 @@ if __name__=='__main__':
     # fourierTesting()
     # wavyPfrontDemo()
     # circlePfrontDemo()
-    # dim3hypersphereTesting()
-    unbalanced()
+    dim3hypersphereTesting()
+    # unbalanced()

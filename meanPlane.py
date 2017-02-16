@@ -55,6 +55,9 @@ class MeanPlane():
         """
         return np.squeeze(np.dot(self._centeredSamples,self.projectionToPlaneMat.T))
 
+    def projectToPlaneCoor(self,locations):
+        return np.squeeze(np.dot(locations-self.meanPoint[np.newaxis,:],self.projectionToPlaneMat.T))
+
     @property
     def inputResidual(self):
         """

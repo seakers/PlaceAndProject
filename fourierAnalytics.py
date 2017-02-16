@@ -10,6 +10,7 @@ from meanPlane import *
 import scipy.ndimage.filters as spndf
 
 from common import *
+from tradeoffMatrixImage import *
 
 def incToEven(i):
     return i+(i%2)
@@ -175,7 +176,26 @@ def reconstruction(freqs, locations, spectrum,numPts):
     return np.squeeze(np.dot(spectrum,np.exp(exponentTerm)))/numPts
 
 def reconstructDerivative(freqs, locations, spectrum, numPts):
-    return np.array([reconstruction(freqs, locations, 2*np.pi*1j*thisFreq*spectrum, numPts) for thisFreq in freqs.flatten()]).T
+    """
+
+    :param freqs:
+    :param locations:
+    :param spectrum:
+    :param numPts:
+    :return: derivative of iFFT of the spectrum as an array with shape (Npts, Ncomponent) or (Ncomponent,) if 1-d
+    """
+    if not np.isscalar(locations):
+        assert locations.shape[0]==1 and locations.shape[1]>1
+        # TODO make consistent behavior. should have 1st index index over array of locations, 2nd index index is over components of output, 3rd is over input components
+        accum=[]
+        for compIndx in range(locations.size):
+            broadcastArr=np.ones(len(freqs.shape))
+            broadcastArr[compIndx]=freqs.shape[1]
+            freqMultiplier=2*np.pi*1j*np.reshape(np.squeeze(freqs[compIndx,:]),broadcastArr)
+            accum.append(reconstruction(freqs, locations, freqMultiplier*spectrum, numPts))
+        return np.array(accum).T
+    else:
+        return reconstruction(freqs,locations,2*np.pi*1j*freqs*spectrum,numPts) # should be scalar
 
 def orderLocations1d(pointLocations):
     """
@@ -361,6 +381,16 @@ def plot3dErr(locations, values):
     plt.imshow(pltVals, origin='lower',extent=(np.min(locations[:,0]),np.max(locations[:,0]), np.min(locations[:,1]),np.max(locations[:,1])))
     plt.plot(locations[:,0],locations[:,1], 'k.')
 
+def runShowSaveClose(toPlot, saveName=None, displayFig=True):
+    plt.figure()
+    toPlot()
+    plt.legend()
+    if saveName is not None:
+        plt.savefig(saveName,bbox_inches='tight')
+    plt.show()
+    if not displayFig:
+        plt.close('all')
+
 def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=2, displayFigs=True):
     """
 
@@ -372,70 +402,34 @@ def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=2, displ
         objHeaders=list(map(lambda n: 'obj: '+str(n),range(data.shape[1])))
     mp=lowDimMeanPlane(data) # create the mean plane
 
-    # plt.figure()
-    # mp.draw2dMeanPlane()
-    # # mp.plot2dResidual()
-    # plt.legend()
-    # if saveFigsPrepend is not None:
-    #     plt.savefig(saveFigsPrepend+'_meanPlane.png',bbox_inches='tight')
-    # plt.show()
+    # runShowSaveClose(mp.draw2dMeanPlane,saveFigsPrepend+'_meanPlane.png',displayFig=displayFigs)
+    # runShowSaveClose(ft.partial(plotLogTradeRatios,mp,objHeaders),saveFigsPrepend+'_tradeRatios.png',displayFig=displayFigs)
 
-    plt.figure()
-    plotLogTradeRatios(mp, objHeaders)
-    plt.legend()
-    if saveFigsPrepend is not None:
-        plt.savefig(saveFigsPrepend+'_tradeRatios.png',bbox_inches='tight')
-    plt.show()
-    if not displayFigs:
-        plt.close('all')
-
-    # fa=SlowFourierAnalyzer.fromMeanPlane(mp)
-    # fa.addSpectralFilter(spectralGaussBlur)
-    # sm=FourierSummarizer(4)
-    # fa.addSpectralFilter(sm)
     fa=FourierSummarizerAnalyzer.fromMeanPlane(mp,freqsToKeep)
-    # fa=FourierSummarizerAnalyzer.fromMeanPlane(mp,freqsToKeep=1000)
-    fa.report()
+    if displayFigs:
+        fa.report()
     if saveFigsPrepend is not None:
         fa.report(saveFigsPrepend+'_report.csv')
 
-    plt.figure()
-    spectral1dPowerPlot(fa)
-    if saveFigsPrepend is not None:
-        plt.savefig(saveFigsPrepend+'_spectralPower.png',bbox_inches='tight')
-    plt.show()
-    if not displayFigs:
-        plt.close('all')
+    # runShowSaveClose(ft.partial(spectral1dPowerPlot,fa),saveFigsPrepend+'_spectralPower.png',displayFig=displayFigs)
+    # runShowSaveClose(ft.partial(spectral1dPhasePlot,fa),saveFigsPrepend+'_spectralPhase.png',displayFig=displayFigs)
 
-    plt.figure()
-    spectral1dPhasePlot(fa)
-    if saveFigsPrepend is not None:
-        plt.savefig(saveFigsPrepend+'_spectralPhase.png',bbox_inches='tight')
-    plt.show()
-    if not displayFigs:
-        plt.close('all')
+    # plt.figure()
+    # spectralPower=np.abs(np.fft.fftshift(fa.trueSpectrum()))**2
+    # plt.plot(np.fft.fftshift(fa.fftFreqs),spectralPower,'.-')
+    # plt.xlabel('frequency')
+    # plt.ylabel('square power')
+    # if saveFigsPrepend is not None:
+    #     plt.savefig(saveFigsPrepend+'_trueSpectralPower.png',bbox_inches='tight')
+    # plt.show()
+    # if not displayFigs:
+    #     plt.close('all')
 
-    plt.figure()
-    spectralPower=np.abs(np.fft.fftshift(fa.trueSpectrum()))**2
-    plt.plot(np.fft.fftshift(fa.fftFreqs),spectralPower,'.-')
-    plt.xlabel('frequency')
-    plt.ylabel('square power')
-    if saveFigsPrepend is not None:
-        plt.savefig(saveFigsPrepend+'_trueSpectralPower.png',bbox_inches='tight')
-    plt.show()
-    if not displayFigs:
-        plt.close('all')
-
-    plt.figure()
-    approximationPlot2d(mp, fa)
-    if saveFigsPrepend is not None:
-        plt.savefig(saveFigsPrepend+'_reverseTransform.png',bbox_inches='tight')
-    plt.show()
-    if not displayFigs:
-        plt.close('all')
+    # runShowSaveClose(ft.partial(approximationPlot2d,mp,fa),saveFigsPrepend+'_reverseTransform.png',displayFig=displayFigs)
+    runShowSaveClose(ft.partial(plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)
     return (mp,fa)
 
-def run3danalysis(data,objHeaders=None,saveFigsPrepend=None,displayFigs=True):
+def run3danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=2**2,displayFigs=True):
     """
     standard set of plots generated for 2-objective problems
     :param data: designs to plot. each row is a design and each column is an objective
@@ -444,69 +438,20 @@ def run3danalysis(data,objHeaders=None,saveFigsPrepend=None,displayFigs=True):
     if objHeaders is None:
         objHeaders=list(map(lambda n: 'obj: '+str(n),range(data.shape[1])))
     mp=lowDimMeanPlane(data) # create the mean plane
-    plt.figure()
-    mp.draw3dMeanPlane()
-    # mp.plot2dResidual()
-    # plt.legend()
-    if saveFigsPrepend is not None:
-        plt.savefig(saveFigsPrepend+'_meanPlane.png',bbox_inches='tight')
-    plt.show()
-    if not displayFigs:
-        plt.close('all')
+    runShowSaveClose(mp.draw2dMeanPlane,saveFigsPrepend+'_meanPlane.png',displayFig=displayFigs)
+    runShowSaveClose(ft.partial(plotLogTradeRatios,mp,objHeaders),saveFigsPrepend+'_tradeRatios.png',displayFig=displayFigs)
 
-    plt.figure()
-    plotLogTradeRatios(mp, objHeaders)
-    plt.legend()
-    if saveFigsPrepend is not None:
-        plt.savefig(saveFigsPrepend+'_tradeRatios.png',bbox_inches='tight')
-    plt.show()
-    if not displayFigs:
-        plt.close('all')
-
-    fa=FourierSummarizerAnalyzer.fromMeanPlane(mp,freqsToKeep=5**2)
-    plt.figure()
-    spectral2dPowerImage(fa)
-    if saveFigsPrepend is not None:
-        plt.savefig(saveFigsPrepend+'_spectralPower.png',bbox_inches='tight')
-    plt.show()
-    if not displayFigs:
-        plt.close('all')
-
-    plt.figure()
-    spectral2dPowerPlot(fa)
-    if saveFigsPrepend is not None:
-        plt.savefig(saveFigsPrepend+'_spectralPower3d.png',bbox_inches='tight')
-    plt.show()
-    if not displayFigs:
-        plt.close('all')
-
-    plt.figure()
-    approximationPlot3d(mp, fa) # not yet implemented
-    if saveFigsPrepend is not None:
-       plt.savefig(saveFigsPrepend+'_reverseTransform.png',bbox_inches='tight')
-    plt.show()
-    if not displayFigs:
-        plt.close('all')
-
-    plt.figure()
-    plot3dErr(mp.inputInPlane, mp.inputResidual)
-    if saveFigsPrepend is not None:
-        plt.savefig(saveFigsPrepend+'_errorPlot.png',bbox_inches='tight')
-    plt.show()
-    if not displayFigs:
-        plt.close('all')
-
-    fa.report()
+    fa=FourierSummarizerAnalyzer.fromMeanPlane(mp,freqsToKeep)
+    if displayFigs:
+        fa.report()
     if saveFigsPrepend is not None:
         fa.report(saveFigsPrepend+'_report.csv')
-
-    plt.figure()
-    fa.powerDeclineReport()
-    if saveFigsPrepend is not None:
-        plt.savefig(saveFigsPrepend+'_powerDeclineReport.png',bbox_inches='tight')
-    plt.show()
-    if not displayFigs:
-        plt.close('all')
+    # runShowSaveClose(ft.partial(spectral2dPowerImage,fa),saveFigsPrepend+'_spectralPower.png',displayFig=displayFigs)
+    # runShowSaveClose(ft.partial(spectral2dPowerPlot,fa),saveFigsPrepend+'_spectralPower3d.png',displayFig=displayFigs)
+    # runShowSaveClose(ft.partial(approximationPlot3d,mp,fa),saveFigsPrepend+'_reverseTransform.png',displayFig=displayFigs)
+    # runShowSaveClose(ft.partial(plot3dErr,mp.inputInPlane,mp.inputResidual),saveFigsPrepend+'_errorPlot.png',displayFig=displayFigs)
+    # runShowSaveClose(fa.powerDeclineReport,saveFigsPrepend+'_powerDeclineReport.png',displayFig=displayFigs)
+    runShowSaveClose(ft.partial(plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)
 
 def approximationPlot3d(mp,fa):
     grid_x,grid_y=np.meshgrid(np.linspace(np.min(mp.inputInPlane[:,0]),np.max(mp.inputInPlane[:,0])), np.linspace(np.min(mp.inputInPlane[:,1]),np.max(mp.inputInPlane[:,1])))
@@ -515,7 +460,7 @@ def approximationPlot3d(mp,fa):
     plt.imshow(recons, origin='lower',extent=(np.min(mp.inputInPlane[:,0]),np.max(mp.inputInPlane[:,0]), np.min(mp.inputInPlane[:,1]),np.max(mp.inputInPlane[:,1])))
     plt.plot(mp.inputInPlane[:,0],mp.inputInPlane[:,1],'k.')
 
-def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None,displayFigs=True):
+def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None,freqsToKeep=None,displayFigs=True):
     """
     standard set of plots generated for 2-objective problems
     :param data: designs to plot. each row is a design and each column is an objective
@@ -525,27 +470,18 @@ def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None,displayFigs=T
         objHeaders=list(map(lambda n: 'obj: '+str(n),range(data.shape[1])))
     mp=lowDimMeanPlane(data) # create the mean plane
 
-    plt.figure()
-    plotLogTradeRatios(mp, objHeaders)
-    plt.legend()
-    if saveFigsPrepend is not None:
-        plt.savefig(saveFigsPrepend+'_tradeRatios.png',bbox_inches='tight')
-    plt.show()
-    if not displayFigs:
-        plt.close('all')
+    runShowSaveClose(ft.partial(plotTradeRatios,mp,objHeaders),saveFigsPrepend+'_tradeRatios.png',displayFig=displayFigs)
 
-    fa=FourierSummarizerAnalyzer.fromMeanPlane(mp,2**data.shape[1])
-    fa.report()
+    if freqsToKeep is None:
+        freqsToKeep=2**data.shape[1]
+    fa=FourierSummarizerAnalyzer.fromMeanPlane(freqsToKeep)
+    if displayFigs:
+        fa.report()
     if saveFigsPrepend is not None:
         fa.report(saveFigsPrepend+'_report.csv')
 
-    plt.figure()
-    fa.powerDeclineReport()
-    if saveFigsPrepend is not None:
-        plt.savefig(saveFigsPrepend+'_powerDeclinePlot.png',bbox_inches='tight')
-    plt.show()
-    if not displayFigs:
-        plt.close('all')
+    runShowSaveClose(fa.powerDeclineReport,saveFigsPrepend+'_powerDeclinePlot.png',displayFig=displayFigs)
+    runShowSaveClose(ft.partial(plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)
 
 def spectralGaussBlur(freqs,spectrum,bandwidth=1):
     # kernel=np.exp(-(freqs/bandwidth)**2/2)/np.sqrt(2*np.pi)/bandwidth
@@ -673,12 +609,14 @@ if __name__=="__main__":
     numsmpl=30
 
     # demo finding the mean plane in 2d
-    seedList=np.linspace(0,np.pi/2,numsmpl)
+    # seedList=np.linspace(0,np.pi/2,numsmpl)
     # seedList=np.sort(np.random.rand(numsmpl)*np.pi/2)
-    dummyTest2d=np.vstack((np.sin(seedList),np.cos(seedList))).T
+    # dummyTest2d=np.vstack((np.sin(seedList),np.cos(seedList))).T
 
     # run2danalysis(dummyTest2d,saveFigsPrepend='testSave')
-    run2danalysis(dummyTest2d)
+    # run2danalysis(dummyTest2d)
+
+    seedList=np.linspace()
 
 # TODO: Report basis vector directions for interpretign direction in fourier analysis
 # TODO: make sure normal vector points in one particular direction
