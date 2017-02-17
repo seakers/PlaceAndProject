@@ -46,7 +46,7 @@ def nullspace(A, eps=1e-13):
     return scipy.transpose(null_space)
 
 def derivativeMat(meanPlane, fourierAnalyzer, loc):
-    if np.isscalar(loc):
+    if len(loc.shape) == 0:
         singleLoc=np.array([loc,])
     else:
         singleLoc=loc
@@ -66,7 +66,7 @@ def tradeoffCalcSingleLoc(meanPlane, fourierAnalyzer,loc,obj1,obj2):
     else:
         dirToTravel=np.array([1,])[:,np.newaxis]
     moveInY=np.real(np.dot(gradYwrtX,dirToTravel)) # should be real
-    return moveInY[obj1]/moveInY[obj2]
+    return -moveInY[obj1]/moveInY[obj2]
 
 def tradeoffCalc(meanPlane, fourierAnalyzer,locations,obj1,obj2):
     accum=[]
@@ -74,7 +74,7 @@ def tradeoffCalc(meanPlane, fourierAnalyzer,locations,obj1,obj2):
         accum.append(tradeoffCalcSingleLoc(meanPlane,fourierAnalyzer,loc,obj1,obj2))
     return np.array(accum)
 
-def plotTradeRatios(mp, fa, objLabels,preconditioner=None,numToSample=15,pixPerSide=10):
+def plotTradeRatios(mp, fa, objLabels,preconditioner=None,numToSample=50,pixPerSide=10):
     if preconditioner is None:
         tr=mp.tradeRatios
     else:
@@ -93,11 +93,11 @@ def plotTradeRatios(mp, fa, objLabels,preconditioner=None,numToSample=15,pixPerS
     rangesNoised=np.ptp(locs2dNoised,axis=0)
     # gradient=fa.reconstructDerivative(locations=mp.projectToPlaneCoor(samples))
 
-    gridLocs=(np.mgrid[0:pixPerSide,0:pixPerSide]+0.5)*(rangesNoised[:,np.newaxis,np.newaxis])
+    gridLocs=(np.mgrid[0:pixPerSide,0:pixPerSide]+0.5)/pixPerSide*(rangesNoised[:,np.newaxis,np.newaxis])
     gridIndxs=np.mgrid[0:pixPerSide, 0:pixPerSide]
     flatLocs=np.array([arr.flatten() for arr in gridLocs]).T
     flatIndxs=np.array([arr.flatten() for arr in gridIndxs]).T
-    dists=spst.distance.cdist(flatLocs,locs2dNoised)
+    dists=spst.distance.cdist(flatLocs-np.mean(flatLocs,axis=0)[np.newaxis,:],locs2dNoised-np.mean(locs2dNoised,axis=0)[np.newaxis,:])
 
     accum=[[None,]*len(tr) for cnt in range(len(tr))]
     for k in range(len(accum)):
@@ -114,6 +114,12 @@ def plotTradeRatios(mp, fa, objLabels,preconditioner=None,numToSample=15,pixPerS
             accum[j][i]=1/imageMat
     else:
         matches=np.array(Munkres().compute(dists.T)) # [:,0] is the sample index, [:,1] is the pixel index
+
+        # check matching
+        # plt.plot(flatLocs[:,0],flatLocs[:,1],'.',samples[:,0],samples[:,1],'o')
+        # plt.plot(np.vstack((samples[matches[:,0],0],flatLocs[matches[:,1],0])),np.vstack((samples[matches[:,0],1],flatLocs[matches[:,1],1])))
+        # plt.show()
+
         print('finished matching')
         for i,j in it.combinations(range(len(tr)),2):
             imageMat=np.ones((pixPerSide,pixPerSide))*tr[i,j]
@@ -127,7 +133,7 @@ def plotTradeRatios(mp, fa, objLabels,preconditioner=None,numToSample=15,pixPerS
     accumReorder=[[accum[l][k] for k in reorderArr] for l in reorderArr]
     toPlot=np.vstack(tuple(map(np.hstack, map(tuple,accumReorder))))
 
-    # toPlot=np.log(np.abs(toPlot))
+    toPlot=np.log(np.abs(toPlot))
 
     plt.imshow(toPlot,cmap='Greys',interpolation='nearest')
     plt.colorbar()

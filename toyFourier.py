@@ -141,7 +141,7 @@ def dim3hypersphereTesting():
 
 if __name__=='__main__':
     # fourierTesting()
-    # wavyPfrontDemo()
+    wavyPfrontDemo()
     # circlePfrontDemo()
-    dim3hypersphereTesting()
+#     dim3hypersphereTesting()
     # unbalanced()
