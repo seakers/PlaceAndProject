@@ -74,7 +74,7 @@ def tradeoffCalc(meanPlane, fourierAnalyzer,locations,obj1,obj2):
         accum.append(tradeoffCalcSingleLoc(meanPlane,fourierAnalyzer,loc,obj1,obj2))
     return np.array(accum)
 
-def plotTradeRatios(mp, fa, objLabels,preconditioner=None,numToSample=50,pixPerSide=10):
+def plotTradeRatios(mp, fa, objLabels,preconditioner=None,numToSample=75,pixPerSide=10):
     if preconditioner is None:
         tr=mp.tradeRatios
     else:

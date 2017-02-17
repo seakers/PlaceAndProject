@@ -78,7 +78,8 @@ if __name__=="__main__":
     metricsFiles=list(filter(lambda f: f[-8:]=='_met.csv', os.listdir()))
     # metricsFiles=['continuous6obj_met.csv',]
     # metricsFiles=['EOSSdownSel3_met.csv',]
-    # metricsFiles=['EOSSdownSel_met.csv',]
+    # metricsFiles=['EOSSdownSel_met.csv','GNC_scenario_9_met.csv']
+    metricsFiles=['EOSSdownSel_met.csv',]
     for metricsFile in metricsFiles:
         if os.path.isfile(metricsFile):
             pathParts=os.path.split(metricsFile)

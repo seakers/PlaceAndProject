@@ -318,14 +318,14 @@ class FourierAnalyzer():
 
 def spectral1dPowerPlot(fourierAnalyzerObj):
     spectralPower=np.abs(np.fft.fftshift(fourierAnalyzerObj.spectrum))**2
-    plt.plot(np.fft.fftshift(fourierAnalyzerObj.fftFreqs),spectralPower,'.-')
+    plt.plot(np.fft.fftshift(fourierAnalyzerObj.fftFreqs),spectralPower,'k.-')
     plt.xlabel('frequency')
     plt.ylabel('square power')
 
 def spectral1dPhasePlot(fourierAnalyzerObj):
     spectralPhase=np.angle(np.fft.fftshift(fourierAnalyzerObj.spectrum))
     # print(spectralPhase)
-    plt.plot(np.fft.fftshift(fourierAnalyzerObj.fftFreqs),spectralPhase,'.-')
+    plt.plot(np.fft.fftshift(fourierAnalyzerObj.fftFreqs),spectralPhase,'k.-')
     plt.xlabel('frequency')
     plt.ylabel('phase (radians)')
 
@@ -359,16 +359,16 @@ def approximationPlot2d(meanPlane, analyzer):
     dummyTest2d=meanPlane.paretoSamples
     mp=meanPlane
     # plt.plot(mp._centeredSamples[:,0],mp._centeredSamples[:,1])
-    plt.plot(dummyTest2d[:,0],dummyTest2d[:,1],'.',label='Pareto Points')
-    plt.plot(mp.inputProjections[:,0],mp.inputProjections[:,1],'.',label='ProjectedLocations')
+    plt.plot(dummyTest2d[:,0],dummyTest2d[:,1],'k.',label='Pareto Points')
+    plt.plot(mp.inputProjections[:,0],mp.inputProjections[:,1],'kx',label='ProjectedLocations')
     spectralCurveInPlane=np.linspace(mp.inputInPlane.min(),mp.inputInPlane.max(),10*mp.inputInPlane.size)
     planeCurve=np.dot(spectralCurveInPlane[:,np.newaxis],np.squeeze(mp.basisVects)[np.newaxis,:])+mp.meanPoint[np.newaxis,:]
-    plt.plot(planeCurve[:,0],planeCurve[:,1],label='mean plane')
+    plt.plot(planeCurve[:,0],planeCurve[:,1],'k--',label='mean plane')
 
     filteredCorrection=analyzer.reconstruction()
     spectralCurveOutOfPlane=analyzer.reconstruction(spectralCurveInPlane)
     spectralCurve=planeCurve+np.dot(spectralCurveOutOfPlane[:,np.newaxis],mp.normalVect[np.newaxis,:])
-    plt.plot(spectralCurve[:,0],spectralCurve[:,1],label='reconstructed curve')
+    plt.plot(spectralCurve[:,0],spectralCurve[:,1],'k-',label='reconstructed curve')
 
     # corrected=mp.inputProjections+np.dot(filteredCorrection[:,np.newaxis],mp.normalVect[np.newaxis,:])
     # plt.plot(corrected[:,0],corrected[:,1],'.',label='spectral representation of inputs')
@@ -378,13 +378,13 @@ def approximationPlot2d(meanPlane, analyzer):
 
 def plot3dErr(locations, values):
     pltVals=interpolateErr(locations,values)
-    plt.imshow(pltVals, origin='lower',extent=(np.min(locations[:,0]),np.max(locations[:,0]), np.min(locations[:,1]),np.max(locations[:,1])))
+    plt.imshow(pltVals, cmap='Greys', origin='lower',extent=(np.min(locations[:,0]),np.max(locations[:,0]), np.min(locations[:,1]),np.max(locations[:,1])))
+    plt.colorbar()
     plt.plot(locations[:,0],locations[:,1], 'k.')
 
 def runShowSaveClose(toPlot, saveName=None, displayFig=True):
     plt.figure()
     toPlot()
-    plt.legend()
     if saveName is not None:
         plt.savefig(saveName,bbox_inches='tight')
     plt.show()
@@ -416,7 +416,7 @@ def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=2, displ
 
     plt.figure()
     spectralPower=np.abs(np.fft.fftshift(fa.trueSpectrum()))**2
-    plt.plot(np.fft.fftshift(fa.fftFreqs),spectralPower,'.-')
+    plt.plot(np.fft.fftshift(fa.fftFreqs),spectralPower,'k.-')
     plt.xlabel('frequency')
     plt.ylabel('square power')
     if saveFigsPrepend is not None:
@@ -457,8 +457,9 @@ def approximationPlot3d(mp,fa):
     grid_x,grid_y=np.meshgrid(np.linspace(np.min(mp.inputInPlane[:,0]),np.max(mp.inputInPlane[:,0])), np.linspace(np.min(mp.inputInPlane[:,1]),np.max(mp.inputInPlane[:,1])))
     points=np.vstack((grid_x.flatten(),grid_y.flatten())).T
     recons=np.real(fa.reconstruction(locations=points)).reshape(grid_x.shape)
-    plt.imshow(recons, origin='lower',extent=(np.min(mp.inputInPlane[:,0]),np.max(mp.inputInPlane[:,0]), np.min(mp.inputInPlane[:,1]),np.max(mp.inputInPlane[:,1])))
+    plt.imshow(recons, cmap='Greys',origin='lower',extent=(np.min(mp.inputInPlane[:,0]),np.max(mp.inputInPlane[:,0]), np.min(mp.inputInPlane[:,1]),np.max(mp.inputInPlane[:,1])))
     plt.plot(mp.inputInPlane[:,0],mp.inputInPlane[:,1],'k.')
+    plt.colorbar()
 
 def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None,freqsToKeep=None,displayFigs=True):
     """
@@ -470,7 +471,7 @@ def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None,freqsToKeep=N
         objHeaders=list(map(lambda n: 'obj: '+str(n),range(data.shape[1])))
     mp=lowDimMeanPlane(data) # create the mean plane
 
-    # runShowSaveClose(ft.partial(plotLogTradeRatios,mp,objHeaders),saveFigsPrepend+'_tradeRatios.png',displayFig=displayFigs)
+    runShowSaveClose(ft.partial(plotLogTradeRatios,mp,objHeaders),saveFigsPrepend+'_tradeRatios.png',displayFig=displayFigs)
 
     if freqsToKeep is None:
         freqsToKeep=2**data.shape[1]
@@ -480,7 +481,7 @@ def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None,freqsToKeep=N
     if saveFigsPrepend is not None:
         fa.report(saveFigsPrepend+'_report.csv')
 
-    # runShowSaveClose(fa.powerDeclineReport,saveFigsPrepend+'_powerDeclinePlot.png',displayFig=displayFigs)
+    runShowSaveClose(fa.powerDeclineReport,saveFigsPrepend+'_powerDeclinePlot.png',displayFig=displayFigs)
     runShowSaveClose(ft.partial(plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)
 
 def spectralGaussBlur(freqs,spectrum,bandwidth=1):
@@ -561,7 +562,7 @@ class FourierSummarizer():
     def powerDeclineReport(self):
         # plt.fill(np.arange(len(self.freqSpectra)),np.abs(self.freqSpectra)**2)
         # plt.plot(np.arange(len(self.freqSpectra)),np.abs(self.freqSpectra)**2)
-        plt.bar(np.arange(len(self.freqSpectra)),np.abs(self.freqSpectra)**2)
+        plt.bar(np.arange(len(self.freqSpectra)),np.abs(self.freqSpectra)**2,color='#888888')
         if len(self.freqsTaken.shape)>1:
             plt.xticks(range(len(self.freqsTaken)),multiDimNumpyToPrettyStr(self.freqsTaken), rotation=75)
         else:

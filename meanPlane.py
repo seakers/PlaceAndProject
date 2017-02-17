@@ -114,6 +114,7 @@ class lowDimMeanPlane(ParetoMeanPlane):
         planeSampleX=np.linspace(0,1,5)
         planeSampleY=(np.dot(self.normalVect,self.meanPoint)-self.normalVect[0]*planeSampleX)/self.normalVect[1]
         plt.plot(planeSampleX,planeSampleY, label='plane (from normal vector)')
+        plt.legend()
 
     def plot2dResidual(self):
         plt.plot(self.inputInPlane,self.inputResidual,'.-')
@@ -122,7 +123,7 @@ class lowDimMeanPlane(ParetoMeanPlane):
         dummyTest3d = self.paretoSamples
         ax = Axes3D(plt.gcf())
         # ax.scatter(dummyTest3d[:, 0], dummyTest3d[:, 1], dummyTest3d[:, 2], '.', label='sample points')
-        ax.plot(dummyTest3d[:, 0], dummyTest3d[:, 1], dummyTest3d[:, 2], '.', label='sample points')
+        ax.plot(dummyTest3d[:, 0], dummyTest3d[:, 1], dummyTest3d[:, 2], 'k.', label='sample points')
         # ax.plot(mp.inputProjections[:,0],mp.inputProjections[:,1],label='Projections')
         minVal = np.min(self.inputProjections[:, 0:2], axis=0)
         maxVal = np.max(self.inputProjections[:, 0:2], axis=0)
@@ -133,7 +134,7 @@ class lowDimMeanPlane(ParetoMeanPlane):
         evalPointsZ = (np.squeeze(np.dot(self.normalVect, self.meanPoint)) - self.normalVect[0] * evalPointsX -
                        self.normalVect[1] * evalPointsY) / self.normalVect[2]
         # print(evalPointsZ)
-        ax.plot_surface(evalPointsX, evalPointsY, evalPointsZ,color='r',label='mean plane')
+        ax.plot_surface(evalPointsX, evalPointsY, evalPointsZ,color=[.5,.5,.5],label='mean plane')
 
     def plot3dResidual(self):
         """

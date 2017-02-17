@@ -94,7 +94,7 @@ def circlePfrontDemo():
     plt.savefig('circleDemo_meanPlane.png')
     plt.show()
 
-def wavyPfrontDemo():
+def singleEvenBoxDemo():
     x=np.concatenate((np.linspace(0,0.5,32),0.5*np.ones(32)))*2
     y=np.concatenate((np.ones(32),    np.linspace(1,0,32)))
     data=np.vstack((x,y)).T
@@ -111,10 +111,11 @@ def wavyPfrontDemo():
     plt.savefig('singleBoxDemo_meanPlane.png')
     plt.show()
 
+def wavyPfrontDemo():
     x=np.concatenate((np.linspace(0,0.25,32),0.25*np.ones(32),np.linspace(0.25,0.5,32),0.5*np.ones(32),np.linspace(0.5,0.75,32),0.75*np.ones(32),np.linspace(0.75,1,32),np.ones(32)))
     y=np.concatenate((np.ones(32),np.linspace(1,0.75,32),0.75*np.ones(32),np.linspace(0.75,0.5,32), 0.5*np.ones(32), np.linspace(0.5,0.25,32),0.25*np.ones(32),np.linspace(0.25,0,32)))
     data=np.vstack((x,y)).T
-    mp,fa=run2danalysis(data,saveFigsPrepend='boxyDemo')
+    mp,fa=run2danalysis(data,saveFigsPrepend='boxyDemo',freqsToKeep=1000)
     plt.figure()
     plt.plot(mp.inputInPlane,mp.inputResidual)
     plt.xlabel('projected inputs in the plane')
@@ -141,7 +142,7 @@ def dim3hypersphereTesting():
 
 if __name__=='__main__':
     # fourierTesting()
-    wavyPfrontDemo()
+    # wavyPfrontDemo()
     # circlePfrontDemo()
-#     dim3hypersphereTesting()
+    dim3hypersphereTesting()
     # unbalanced()
