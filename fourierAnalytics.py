@@ -319,13 +319,18 @@ class FourierAnalyzer():
 def spectral1dPowerPlot(fourierAnalyzerObj):
     spectralPower=np.abs(np.fft.fftshift(fourierAnalyzerObj.spectrum))**2
     plt.plot(np.fft.fftshift(fourierAnalyzerObj.fftFreqs),spectralPower,'k.-')
+    # axis_font={'size':'28'}
+    # plt.xlabel('frequency',**axis_font)
+    # plt.ylabel('square power',**axis_font)
     plt.xlabel('frequency')
     plt.ylabel('square power')
-
 def spectral1dPhasePlot(fourierAnalyzerObj):
     spectralPhase=np.angle(np.fft.fftshift(fourierAnalyzerObj.spectrum))
     # print(spectralPhase)
     plt.plot(np.fft.fftshift(fourierAnalyzerObj.fftFreqs),spectralPhase,'k.-')
+    # axis_font={'size':'28'}
+    # plt.xlabel('frequency',**axis_font)
+    # plt.ylabel('phase (radians)',**axis_font)
     plt.xlabel('frequency')
     plt.ylabel('phase (radians)')
 
@@ -355,7 +360,7 @@ def spectral2dPowerImage(fourierAnalyzerObj):
     # plt.xticks(np.arange(len(fourierAnalyzerObj.fftFreqs[0])), fourierAnalyzerObj.fftFreqs[0], rotation=60)
     # plt.yticks(np.arange(len(fourierAnalyzerObj.fftFreqs[1])), fourierAnalyzerObj.fftFreqs[1])
 
-def approximationPlot2d(meanPlane, analyzer):
+def approximationPlot2d(meanPlane, analyzer,objLabels=None):
     dummyTest2d=meanPlane.paretoSamples
     mp=meanPlane
     # plt.plot(mp._centeredSamples[:,0],mp._centeredSamples[:,1])
@@ -374,6 +379,9 @@ def approximationPlot2d(meanPlane, analyzer):
     # plt.plot(corrected[:,0],corrected[:,1],'.',label='spectral representation of inputs')
 
     plt.axis('equal')
+    if objLabels is not None:
+        plt.xlabel(objLabels[0])
+        plt.ylabel(objLabels[1])
     plt.legend(loc='best')
 
 def plot3dErr(locations, values):
@@ -417,6 +425,9 @@ def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=2, displ
     plt.figure()
     spectralPower=np.abs(np.fft.fftshift(fa.trueSpectrum()))**2
     plt.plot(np.fft.fftshift(fa.fftFreqs),spectralPower,'k.-')
+    # axis_font={'size':'28'}
+    # plt.xlabel('frequency',**axis_font)
+    # plt.ylabel('square power',**axis_font)
     plt.xlabel('frequency')
     plt.ylabel('square power')
     if saveFigsPrepend is not None:
@@ -425,7 +436,7 @@ def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=2, displ
     if not displayFigs:
         plt.close('all')
 
-    runShowSaveClose(ft.partial(approximationPlot2d,mp,fa),saveFigsPrepend+'_reverseTransform.png',displayFig=displayFigs)
+    runShowSaveClose(ft.partial(approximationPlot2d,mp,fa,objHeaders),saveFigsPrepend+'_reverseTransform.png',displayFig=displayFigs)
     runShowSaveClose(ft.partial(plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)
     return (mp,fa)
 
