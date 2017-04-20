@@ -449,20 +449,20 @@ def run3danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=3**2,dis
     if objHeaders is None:
         objHeaders=list(map(lambda n: 'obj: '+str(n),range(data.shape[1])))
     mp=lowDimMeanPlane(data) # create the mean plane
-    runShowSaveClose(mp.draw3dMeanPlane,saveFigsPrepend+'_meanPlane.png',displayFig=displayFigs)
-    runShowSaveClose(ft.partial(plotLogTradeRatios,mp,objHeaders),saveFigsPrepend+'_tradeRatios.png',displayFig=displayFigs)
+    runShowSaveClose(mp.draw3dMeanPlane,noneSafeConcat(saveFigsPrepend,'_meanPlane.png'),displayFig=displayFigs)
+    runShowSaveClose(ft.partial(plotLogTradeRatios,mp,objHeaders),noneSafeConcat(saveFigsPrepend,'_tradeRatios.png'),displayFig=displayFigs)
 
     fa=FourierSummarizerAnalyzer.fromMeanPlane(mp,freqsToKeep)
     if displayFigs:
         fa.report()
     if saveFigsPrepend is not None:
         fa.report(saveFigsPrepend+'_report.csv')
-    runShowSaveClose(ft.partial(spectral2dPowerImage,fa),saveFigsPrepend+'_spectralPower.png',displayFig=displayFigs)
-    runShowSaveClose(ft.partial(spectral2dPowerPlot,fa),saveFigsPrepend+'_spectralPower3d.png',displayFig=displayFigs)
-    runShowSaveClose(ft.partial(approximationPlot3d,mp,fa),saveFigsPrepend+'_reverseTransform.png',displayFig=displayFigs)
-    runShowSaveClose(ft.partial(plot3dErr,mp.inputInPlane,mp.inputResidual),saveFigsPrepend+'_errorPlot.png',displayFig=displayFigs)
-    runShowSaveClose(fa.powerDeclineReport,saveFigsPrepend+'_powerDeclineReport.png',displayFig=displayFigs)
-    runShowSaveClose(ft.partial(plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)
+    runShowSaveClose(ft.partial(spectral2dPowerImage,fa),noneSafeConcat(saveFigsPrepend,'_spectralPower.png'),displayFig=displayFigs)
+    runShowSaveClose(ft.partial(spectral2dPowerPlot,fa),noneSafeConcat(saveFigsPrepend,'_spectralPower3d.png'),displayFig=displayFigs)
+    runShowSaveClose(ft.partial(approximationPlot3d,mp,fa),noneSafeConcat(saveFigsPrepend,'_reverseTransform.png'),displayFig=displayFigs)
+    runShowSaveClose(ft.partial(plot3dErr,mp.inputInPlane,mp.inputResidual),noneSafeConcat(saveFigsPrepend,'_errorPlot.png'),displayFig=displayFigs)
+    runShowSaveClose(fa.powerDeclineReport,noneSafeConcat(saveFigsPrepend,'_powerDeclineReport.png'),displayFig=displayFigs)
+    runShowSaveClose(ft.partial(plotTradeRatios,mp,fa,objHeaders),noneSafeConcat(saveFigsPrepend,'_tradeoffPlot.png'),displayFig=displayFigs)
 
 def approximationPlot3d(mp,fa):
     grid_x,grid_y=np.meshgrid(np.linspace(np.min(mp.inputInPlane[:,0]),np.max(mp.inputInPlane[:,0])), np.linspace(np.min(mp.inputInPlane[:,1]),np.max(mp.inputInPlane[:,1])))

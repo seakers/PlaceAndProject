@@ -18,6 +18,14 @@ def concaveHypersphere(numTest):
     altRad=np.sqrt(1-z**2)
     return np.vstack((altRad*np.cos(np.pi/2*rands[1,:]), altRad*np.sin(np.pi/2*rands[1,:]), z)).T
 
+def pathologicalRing(numsmpl,llim=40*np.pi/180,ulim=50*np.pi/180):
+    # np.random.seed(2130935987)
+    np.random.seed(121310)
+    rndmRollTh=np.random.rand(numsmpl)*(ulim-llim)+llim
+    z=np.random.rand(numsmpl)
+    altRad=np.sqrt(1-z**2)
+    return np.vstack((altRad*np.cos(rndmRollTh), altRad*np.sin(rndmRollTh), z)).T
+
 def prep3dAxes():
     fig=plt.gcf()
     ax=fig.add_subplot(111,projection='3d')
@@ -32,7 +40,7 @@ def draw3dSurface(points):
     ax=prep3dAxes()
     ax.plot(points[:,0], points[:,1], points[:,2], '.')
     ax.legend()
-    plt.show()
+    # plt.show()
 
 def numpyze(input):
     """
@@ -50,4 +58,10 @@ def numpyze(input):
     if hasattr(input, '__iter__'):
         return np.fromiter(input)
     raise TypeError('cannot cast '+str(input)+' into a numpy array')
+
+def noneSafeConcat(*args):
+    if any(e is None for e in args):
+        return None
+    else:
+        return "".join(args)
 
