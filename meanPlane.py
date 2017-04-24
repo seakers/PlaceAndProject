@@ -134,7 +134,7 @@ class lowDimMeanPlane(ParetoMeanPlane):
         evalPointsZ = (np.squeeze(np.dot(self.normalVect, self.meanPoint)) - self.normalVect[0] * evalPointsX -
                        self.normalVect[1] * evalPointsY) / self.normalVect[2]
         # print(evalPointsZ)
-        ax.plot_surface(evalPointsX, evalPointsY, evalPointsZ,color=[.5,.5,.5],label='mean plane')
+        ax.plot_surface(evalPointsX, evalPointsY, evalPointsZ,color=globalPlaneColor,label='mean plane')
 
     def plot3dResidual(self):
         """

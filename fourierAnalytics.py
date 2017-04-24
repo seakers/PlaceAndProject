@@ -340,19 +340,11 @@ def spectral2dPowerPlot(fourierAnalyzerObj):
     ax=prep3dAxes()
     ax.plot_surface(freqProd[0],freqProd[1],spectralPower)
 
-def numpyToPrettyStr(numpyArr):
-    tickFormat=lambda x: "%.4f" % x
-    return list(map(tickFormat, numpyArr))
-
-def multiDimNumpyToPrettyStr(numpyArr):
-    formatStrBuilder="( "+", ".join(("%.3f",)*numpyArr.shape[1])+")"
-    tickFormat=lambda x: formatStrBuilder % tuple(x)
-    return list(map(tickFormat, numpyArr))
 
 def spectral2dPowerImage(fourierAnalyzerObj):
     spectralPower=np.abs(fourierAnalyzerObj.spectrum)**2
-    # plt.imshow(np.fft.fftshift(spectralPower),cmap='Greys',interpolation='nearest')
-    plt.imshow(np.fft.fftshift(spectralPower),cmap='Greys',interpolation='nearest')
+    # plt.imshow(np.fft.fftshift(spectralPower),cmap=globalCmap,interpolation='nearest')
+    plt.imshow(np.fft.fftshift(spectralPower),cmap=globalCmap,interpolation='nearest')
     plt.colorbar()
     shiftedFFTF=np.fft.fftshift(fourierAnalyzerObj.fftFreqs,axes=1)
     plt.xticks(np.arange(len(shiftedFFTF[0])), numpyToPrettyStr(shiftedFFTF[0]), rotation=60)
@@ -386,7 +378,7 @@ def approximationPlot2d(meanPlane, analyzer,objLabels=None):
 
 def plot3dErr(locations, values):
     pltVals=interpolateErr(locations,values)
-    plt.imshow(pltVals, cmap='Greys', origin='lower',extent=(np.min(locations[:,0]),np.max(locations[:,0]), np.min(locations[:,1]),np.max(locations[:,1])))
+    plt.imshow(pltVals, cmap=globalCmap, origin='lower',extent=(np.min(locations[:,0]),np.max(locations[:,0]), np.min(locations[:,1]),np.max(locations[:,1])))
     plt.colorbar()
     plt.plot(locations[:,0],locations[:,1], 'k.')
 
@@ -399,7 +391,7 @@ def runShowSaveClose(toPlot, saveName=None, displayFig=True):
     if not displayFig:
         plt.close('all')
 
-def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=2, displayFigs=True):
+def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=2, displayFigs=True, isMaxObj=None):
     """
 
     standard set of plots generated for 2-objective problems
@@ -468,7 +460,7 @@ def approximationPlot3d(mp,fa):
     grid_x,grid_y=np.meshgrid(np.linspace(np.min(mp.inputInPlane[:,0]),np.max(mp.inputInPlane[:,0])), np.linspace(np.min(mp.inputInPlane[:,1]),np.max(mp.inputInPlane[:,1])))
     points=np.vstack((grid_x.flatten(),grid_y.flatten())).T
     recons=np.real(fa.reconstruction(locations=points)).reshape(grid_x.shape)
-    plt.imshow(recons, cmap='Greys',origin='lower',extent=(np.min(mp.inputInPlane[:,0]),np.max(mp.inputInPlane[:,0]), np.min(mp.inputInPlane[:,1]),np.max(mp.inputInPlane[:,1])))
+    plt.imshow(recons, cmap=globalCmap,origin='lower',extent=(np.min(mp.inputInPlane[:,0]),np.max(mp.inputInPlane[:,0]), np.min(mp.inputInPlane[:,1]),np.max(mp.inputInPlane[:,1])))
     plt.plot(mp.inputInPlane[:,0],mp.inputInPlane[:,1],'k.')
     plt.colorbar()
 
@@ -505,8 +497,6 @@ def gaussBlur(input, sigma=10):
     # problem: fails on unevenly spaced data
     spndf.gaussian_filter(input, sigma)
 
-class InitializeRunFailError(Exception):
-    pass
 class FourierSummarizer():
     def __init__(self,numToTake,wavelenth=None):
         self.numTake=numToTake
@@ -573,7 +563,7 @@ class FourierSummarizer():
     def powerDeclineReport(self):
         # plt.fill(np.arange(len(self.freqSpectra)),np.abs(self.freqSpectra)**2)
         # plt.plot(np.arange(len(self.freqSpectra)),np.abs(self.freqSpectra)**2)
-        plt.bar(np.arange(len(self.freqSpectra)),np.abs(self.freqSpectra)**2,color='#888888')
+        plt.bar(np.arange(len(self.freqSpectra)),np.abs(self.freqSpectra)**2,color=globalBarPlotColor)
         if len(self.freqsTaken.shape)>1:
             plt.xticks(range(len(self.freqsTaken)),multiDimNumpyToPrettyStr(self.freqsTaken), rotation=75)
         else:
