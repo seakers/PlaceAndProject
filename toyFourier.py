@@ -1,6 +1,7 @@
 import numpy as np
 import scipy as sp
 import pandas as pd
+from pandas.tools.plotting import parallel_coordinates as paraCoor
 import itertools as it
 import matplotlib.pyplot as plt
 import sklearn as skl
@@ -140,9 +141,36 @@ def dim3hypersphereTesting():
     # fa=SlowFourierAnalyzer(zz,np.vstack((xx,yy)).T)
     # fa=SlowFourierAnalyzer.fromMeanPlane(mp)
 
+def positiveCovarDemo():
+    numsmpl=900
+    dummyTest3d=pathologicalRing(numsmpl)
+    # draw3dSurface(dummyTest3d)
+    # plt.gca().set_aspect('equal')
+    # plt.savefig('positiveCovarPoints.png')
+
+    # plt.plot(dummyTest3d[:,0],dummyTest3d[:,1],'.')
+    # plt.gca().set_aspect('equal')
+    # plt.savefig('positiveCovarPointsIn2d.png')
+
+    pointsAsDF=pd.DataFrame(dummyTest3d,columns=('x','y','z'))
+    plottingDF=pointsAsDF
+    plottingDF['inBand']=np.logical_and(0.4<dummyTest3d[:,0],dummyTest3d[:,0]<0.6)
+    # paraCoor(pointsAsDF,'inBand')
+    # plt.show()
+
+    covar=np.cov(dummyTest3d.T)
+    sprnco=sp.stats.spearmanr(dummyTest3d)
+    print('covariance')
+    print(covar)
+    print('spearman''s rank coefficient')
+    print(sprnco)
+
+    # run3danalysis(dummyTest3d)
+
 if __name__=='__main__':
     # fourierTesting()
     # wavyPfrontDemo()
     # circlePfrontDemo()
-    dim3hypersphereTesting()
+    # dim3hypersphereTesting()
     # unbalanced()
+    positiveCovarDemo()
