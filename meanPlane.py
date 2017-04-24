@@ -8,6 +8,8 @@ import functools as ft
 
 from common import *
 
+# TODO: Constrain to be postitive. Use Quadprog from pip
+
 class MeanPlaneError(Exception):
     pass
 
