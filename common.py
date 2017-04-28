@@ -65,3 +65,4 @@ def noneSafeConcat(*args):
     else:
         return "".join(args)
 
+elemBasis=lambda i,dim: np.array([0,]*(i)+[1,]+[0,]*(dim-i-1))

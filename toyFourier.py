@@ -165,7 +165,15 @@ def positiveCovarDemo():
     print('spearman''s rank coefficient')
     print(sprnco)
 
-    # run3danalysis(dummyTest3d)
+#     run3danalysis(dummyTest3d)
+    import meanPlane as mp
+    testmp=mp.lowDimMeanPlane(dummyTest3d)
+    print('normal vector')
+    print(testmp.normalVect)
+    print('basis vectors')
+    print(testmp.basisVects)
+    testmp.draw3dMeanPlane()
+    plt.show()
 
 if __name__=='__main__':
     # fourierTesting()
