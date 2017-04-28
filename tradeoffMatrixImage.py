@@ -24,7 +24,7 @@ def plotMeanPlaneTradeRatios(mp, objLabels,preconditioner=None):
     trr=tr[:,reorderArr]
     trr=trr[reorderArr,:]
     objLabels_reorder=list(map(lambda i: objLabels[i], range(len(objLabels))))
-    plt.imshow(trr,cmap='Greys',interpolation='nearest')
+    plt.imshow(trr,cmap=globalCmap,interpolation='nearest')
     plt.colorbar()
     plt.xticks(range(len(objLabels_reorder)),objLabels_reorder)
     plt.yticks(range(len(objLabels_reorder)),objLabels_reorder)
@@ -135,7 +135,7 @@ def plotTradeRatios(mp, fa, objLabels,preconditioner=None,numToSample=75,pixPerS
 
     toPlot=np.log(np.abs(toPlot))
 
-    plt.imshow(toPlot,cmap='Greys',interpolation='nearest')
+    plt.imshow(toPlot,cmap=globalCmap,interpolation='nearest')
     plt.colorbar()
     plt.xticks(range(pixPerSide//2,pixPerSide*len(objLabels_reorder),pixPerSide),objLabels_reorder)
     plt.yticks(range(pixPerSide//2,pixPerSide*len(objLabels_reorder),pixPerSide),objLabels_reorder)

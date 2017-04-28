@@ -57,10 +57,16 @@ def runProblemAnalysis(probName,metricsFile,preferenceFile):
         f.readline()
         prefVect=f.readline()
     minMaxDict={'min':1, 'max':-1}
-    multiplier=np.array(list(map(lambda e: minMaxDict[e.strip()],prefVect.split(','))))
+    correctedHeaders=headers
 
+    isMax=np.array(list(map(lambda e: e.strip()=='max',prefVect.split(','))))
+    multiplier=-2*isMax+1
     sameDirVals=dataRead.values*multiplier[np.newaxis,:]
+    appendDict=['','neg. ']
+    correctedHeaders=[appendDict[int(isM)]+s for isM,s in zip(isMax,correctedHeaders)]
+
     normalizedData=(sameDirVals-sameDirVals.min(axis=0)[np.newaxis,:])/np.ptp(sameDirVals,axis=0)[np.newaxis,:]
+    correctedHeaders=['FoR '+s for s in correctedHeaders] # "FoR" stands for "Fraction of Range" and corresponds to the normalization of the dataset by min-max.
 
     meanCoop=covarCompete(normalizedData)
     if np.any(meanCoop):
@@ -68,7 +74,7 @@ def runProblemAnalysis(probName,metricsFile,preferenceFile):
         printCooperating(meanCoop, headers)
     runAnalysisDict=[run2danalysis,run3danalysis,runHighDimAnalysis]
     try:
-        runAnalysisDict[min(len(headers)-2,2)](normalizedData,headers,probName,displayFigs=False)
+        runAnalysisDict[min(len(headers)-2,2)](normalizedData,correctedHeaders,probName,displayFigs=False)
     except mp.NotPointingToOriginError as valErr:
         # print('not pointing to origin: valErr')
         w.warn('not pointing to origin:'+str(valErr))
@@ -79,7 +85,7 @@ if __name__=="__main__":
     # metricsFiles=['continuous6obj_met.csv',]
     # metricsFiles=['EOSSdownSel3_met.csv',]
     # metricsFiles=['EOSSdownSel_met.csv','GNC_scenario_9_met.csv']
-    metricsFiles=['EOSSdownSel_met.csv',]
+    # metricsFiles=['EOSSdownSel_met.csv',]
     for metricsFile in metricsFiles:
         if os.path.isfile(metricsFile):
             pathParts=os.path.split(metricsFile)

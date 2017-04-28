@@ -9,6 +9,8 @@ import scipy.optimize as spo
 
 from common import *
 
+# TODO: Constrain to be postitive. Use Quadprog from pip
+
 class MeanPlaneError(Exception):
     pass
 
@@ -217,7 +219,7 @@ class lowDimMeanPlane(MeanPlane):
         evalPointsZ = (np.squeeze(np.dot(self.normalVect, self.meanPoint)) - self.normalVect[0] * evalPointsX -
                        self.normalVect[1] * evalPointsY) / self.normalVect[2]
         # print(evalPointsZ)
-        ax.plot_surface(evalPointsX, evalPointsY, evalPointsZ,color=[.5,.5,.5],label='mean plane')
+        ax.plot_surface(evalPointsX, evalPointsY, evalPointsZ,color=globalPlaneColor,label='mean plane')
 
     def plot3dResidual(self):
         """

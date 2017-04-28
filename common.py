@@ -8,6 +8,14 @@ from mpl_toolkits.mplot3d import Axes3D #it's tempting. don't delete.
 # https://www.fullstackpython.com/caching.html
 # http://book.pythontips.com/en/latest/function_caching.html
 
+# globalCmap='Greys'
+# globalCmap='plasma'
+globalCmap='YlOrBr'
+# globalBarPlotColor='#888888'
+globalBarPlotColor='#cc6600'
+# globalPlaneColor=[.5,.5,.5]
+globalPlaneColor=[204./255.,102./255.,0]
+
 def concaveHypersphere(numTest):
     """returns a set of random points on the hypersphere in the all positive quadrant"""
     np.random.seed(2130935987)
@@ -64,5 +72,16 @@ def noneSafeConcat(*args):
         return None
     else:
         return "".join(args)
+def numpyToPrettyStr(numpyArr):
+    tickFormat=lambda x: "%.4f" % x
+    return list(map(tickFormat, numpyArr))
+
+def multiDimNumpyToPrettyStr(numpyArr):
+    formatStrBuilder="( "+", ".join(("%.3f",)*numpyArr.shape[1])+")"
+    tickFormat=lambda x: formatStrBuilder % tuple(x)
+    return list(map(tickFormat, numpyArr))
+
+class InitializeRunFailError(Exception):
+    pass
 
 elemBasis=lambda i,dim: np.array([0,]*(i)+[1,]+[0,]*(dim-i-1))

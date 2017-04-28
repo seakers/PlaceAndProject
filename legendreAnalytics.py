@@ -12,17 +12,14 @@ import scipy.ndimage.filters as spndf
 from common import *
 from tradeoffMatrixImage import *
 
-def incToEven(i):
-    return i+(i%2)
-def decToEven(i):
-    return i-(i%2)
+import numpy.polynomial.legendre as pl
 
-class SlowFourierAnalyzer():
+class SlowChebyAnalyzer():
     """
     https://en.wikipedia.org/wiki/Discrete_Fourier_transform#Multidimensional_DFT
     https://en.wikipedia.org/wiki/Non-uniform_discrete_Fourier_transform#2-D_NDFT
     """
-    def __init__(self,pointHeight,pointLocation,frequenciesToEval=None):
+    def __init__(self,pointHeight,pointLocation,ordersToEval=None):
         """
         initializes the FourierAnalyzer object
         :param pointHeight:
@@ -30,28 +27,9 @@ class SlowFourierAnalyzer():
         """
         self.pointLocation=pointLocation
         self.pointHeight=pointHeight
-        if frequenciesToEval is None:
-            if len(pointLocation.shape)>1:
-                nthRoot=incToEven(np.ceil(pointHeight.size**(1/pointLocation.shape[1])))
-                frequencyDivisions=(nthRoot,)*pointLocation.shape[1]
-            ranges=np.ptp(self.pointLocation,axis=0)
-            # __oneFreqRange=lambda range, n: np.concatenate((np.linspace(0,range,n//2+1),np.linspace(0,range,incToEven(n)/2+1)[::-1]))
-            if len(self.pointLocation.shape)==1:
-                frequenciesToEval=1/(ranges)*np.concatenate((np.arange(1,pointHeight.size//2+1),-np.arange(1,incToEven(pointHeight.size)/2+1)[::-1]))
-                # frequenciesToEval=__oneFreqRange(ranges,pointHeight.size)
-                # frequenciesToEval=1/(ranges)*np.arange(1,incToEven(pointHeight.size)/2)
-            else:
-                frequenciesToEval=np.array(list(map(lambda r, n: 1/r * np.concatenate((np.arange(1,n//2+1),-np.arange(1,incToEven(n)/2+1)[::-1])), ranges, frequencyDivisions)))
-                # frequenciesToEval=np.dot(1/(ranges[:,np.newaxis]),np.concatenate((np.arange(1,pointHeight.size//2),-np.arange(1,incToEven(pointHeight.size)/2)[::-1]))[np.newaxis,:])
-                # frequenciesToEval=np.array(list(map(__oneFreqRange,ranges,it.repeat(pointHeight.size))))
-                # frequenciesToEval=np.dot(1/(ranges[:,np.newaxis]),np.arange(1,incToEven(pointHeight.size)/2)[np.newaxis,:])
-        self.fftFreqs=numpyze(frequenciesToEval)
-        self.periodHumps=np.concatenate((np.arange(1,pointHeight.size//2),-np.arange(1,incToEven(pointHeight.size)/2)[::-1]))
-        self.realInput=False
-        if len(pointLocation.shape)==1:
-            self.numFreqs=len(frequenciesToEval)
-        else:
-            self.numFreqs=tuple(map(len,frequenciesToEval))
+        if ordersToEval is None:
+            ordersToEval=np.arange(2,len(pointHeight))
+        self.ordersToEval=ordersToEval
         self.spectralFilters=[]
         self.inputFilters=[]
 
@@ -63,12 +41,6 @@ class SlowFourierAnalyzer():
         self.inputFilters.append(filter)
     def removeInputFilter(self,filter):
         self.inputFilters.remove(filter)
-
-    # @property
-    # def __freqSumMat(self):
-    #     numel=self.pointHeight.size
-    #     powChngMat,freqChngMat=np.meshgrid(np.arange(0,numel),np.linspace(0,np.max(self.pointLocation))) # TODO: generalize for higher dimensions
-    #     np.exp(powChngMat*freqChngMat*1j*self.pointLocation)
 
     @property
     def spectrum(self):
@@ -83,10 +55,10 @@ class SlowFourierAnalyzer():
         return self.filteredSpectrum()
 
     def filteredSpectrum(self):
-        return filteredSpectrum(self.inputFilters,self.spectralFilters,self.fftFreqs, self.pointLocation, self.pointHeight)
+        return filteredSpectrum(self.inputFilters,self.spectralFilters,self.ordersToEval, self.pointLocation, self.pointHeight)
 
     def trueSpectrum(self):
-        return forwardTransform(self.fftFreqs, self.pointLocation, self.pointHeight)
+        return forwardTransform(self.ordersToEval, self.pointLocation, self.pointHeight)
 
     def reconstruction(self, locations=None):
         """
@@ -96,24 +68,25 @@ class SlowFourierAnalyzer():
         """
         if locations is None:
             locations=self.pointLocation
-        return reconstruction(self.fftFreqs,locations,self.filteredSpectrum(),self.pointHeight.size)
+        return reconstruction(self.ordersToEval,locations,self.filteredSpectrum(),self.pointHeight.size)
 
     def reconstructDerivative(self,locations=None):
         if locations is None:
             locations=self.pointLocation
-        return reconstructDerivative(self.fftFreqs,locations, self.spectrum, self.pointHeight.size)
+        return reconstructDerivative(self.ordersToEval,locations, self.spectrum, self.pointHeight.size)
 
     def avgSqrdReconstructionError(self):
         return np.mean((self.reconstruction()-self.pointHeight)**2)
 
     def freqGrid(self):
-        return freqTuples(self.fftFreqs)
+        return orderTuples(self.ordersToEval)
 
     @classmethod
     def fromMeanPlane(cls,meanPlane):
         """returns a FourierAnalyzer which analyzes the residuals as defined by locations in the inputProjections"""
-        return SlowFourierAnalyzer(meanPlane.inputResidual,meanPlane.inputInPlane)
+        return SlowChebyAnalyzer(meanPlane.inputResidual,meanPlane.inputInPlane)
 
+#TODO: Update
 def freqTuples(freqs):
     freqProd=np.array(freqs)
     if len(freqProd.shape)>1:
@@ -123,7 +96,7 @@ def freqTuples(freqs):
     return freqProd
 
 def forwardTransform(freqs, locations, functionVals):
-    freqProd=freqTuples(freqs)
+    freqProd=orderTuples(freqs)
     if len(locations.shape)==1:
         pointLoc=locations[:,np.newaxis]
     else:
@@ -139,15 +112,6 @@ def forwardTransform(freqs, locations, functionVals):
 def stdNumPerSide(dataShape):
     nthRoot=int(np.ceil(dataShape[0]**(1/dataShape[1])))
     return (nthRoot,)*dataShape[1]
-
-def interpolateErr(locations, values, numPerSide=None):
-    if numPerSide is None:
-        numPerSide=stdNumPerSide(locations.shape)
-    gridLocs=list(map(lambda lo, hi, n: np.linspace(lo, hi, n), np.min(locations, axis=0), np.max(locations, axis=0), numPerSide))
-    freqProd=tuple(np.meshgrid(*gridLocs))
-    return sp.interpolate.griddata(locations, values, freqProd,method='nearest')
-    # grid_x,grid_y=np.meshgrid(np.linspace(np.min(locations[:,0]),np.max(locations[:,0])), np.linspace(np.min(locations[:,1]),np.max(locations[:,1])))
-    # return sp.interpolate.griddata(locations, values, (grid_x,grid_y),method='nearest')
 
 def filteredSpectrum(inputFilters, spectralFilters,frequencies,locations,heights,forwardTransform=forwardTransform):
     filtLoc=locations
@@ -218,107 +182,9 @@ def orderLocations(xy):
 class OptionNotSupportedError(Exception):
     pass
 
-class FourierAnalyzer():
-    """
-    resource on learning what the multidimensional transform is and does: https://see.stanford.edu/materials/lsoftaee261/chap8.pdf
-    python nonuniform FFT: https://pypi.python.org/pypi/pynufft/0.3.2.8
-    Some other libraries: http://dsp.stackexchange.com/questions/16590/non-uniform-fft-with-fftw
-    """
-    def __init__(self,pointHeight,pointLocation,frequenciesToEval=None):
-        """
-
-        initializes the FourierAnalyzer object
-        :param pointHeight:
-        :param pointLocation:
-        """
-        if frequenciesToEval is not None:
-            raise OptionNotSupportedError('cannot select frequencies and still run FFT')
-        # orderingArray=orderLocations1d(pointLocation)
-        # self.pointHeight=pointHeight[orderingArray]
-        # self.pointLocation=pointLocation[orderingArray]
-        self.pointHeight=pointHeight
-        self.pointLocation=pointLocation
-        self.spectralFilters=[]
-        self.inputFilters=[]
-        if len(pointLocation.shape)>1:
-            nthRoot=np.ceil(pointHeight.size**(1/pointLocation.shape[1]))
-            frequencyDivisions=(nthRoot,)*pointLocation.shape[1]
-        ranges=np.ptp(self.pointLocation,axis=0)
-
-    def addSpectralFilter(self,filter):
-        self.spectralFilters.append(filter)
-    def removeSpectralFilter(self, filter):
-        self.spectralFilters.remove(filter)
-    def addInputFilter(self,filter):
-        self.inputFilters.append(filter)
-    def removeInputFilter(self,filter):
-        self.inputFilters.remove(filter)
-
-    def __interpAndFFT(self, freqs,locations, functionVals):
-        errMat=interpolateErr(locations, functionVals)
-        return np.fft.fftn(errMat)
-
-    def __interpAndFFT1d(self, freqs,locations, functionVals):
-        interpolator=sp.interpolate.interp1d(locations, functionVals, kind='nearest')
-        interpLocs=np.linspace(np.min(locations), np.max(locations), len(locations))
-        interpedVals=interpolator(interpLocs)
-        return np.fft.fft(interpedVals)[1:]
-
-    @property
-    def spectrum(self):
-        """
-        :return: the one-sided spectrum of the pointHeights and locations input when creating the analyzer
-        """
-        return self.filteredSpectrum()
-
-    def trueSpectrum(self):
-        if len(self.pointLocation.shape)>1:
-            return self.__interpAndFFT(self.fftFreqs,self.pointLocation,self.pointHeight)
-        else:
-            return self.__interpAndFFT1d(self.fftFreqs,self.pointLocation,self.pointHeight)
-
-    def filteredSpectrum(self):
-        """
-        :return:
-        """
-        if len(self.pointLocation.shape)>1:
-            return filteredSpectrum(self.inputFilters,self.spectralFilters,self.fftFreqs,self.pointLocation,self.pointHeight, self.__interpAndFFT)
-        else:
-            return filteredSpectrum(self.inputFilters,self.spectralFilters,self.fftFreqs,self.pointLocation,self.pointHeight, self.__interpAndFFT1d)
-
-    @property
-    def fftFreqs(self):
-        """returns the frequencies at which the spectrum is evaluated"""
-        if len(self.pointLocation.shape)>1:
-            nps=stdNumPerSide(self.pointLocation.shape)
-            spacing=list(map(lambda lo, hi, n: (hi-lo)/(n-1), np.min(self.pointLocation, axis=0), np.max(self.pointLocation, axis=0), nps))
-            return np.array([np.fft.fftfreq(n,d=space)[1:] for n,space in zip(nps,spacing)])
-        else:
-            return np.fft.fftfreq(len(self.pointHeight),d=np.ptp(self.pointLocation)/len(self.pointHeight))[1:]
-
-    def reconstruction(self,locations=None):
-        """
-        runs fourier series defined by this analysis.
-        :param locations: locations to evaluate at. if None (default) evaluates on the input locations
-        :return: value of the inverse transform at corresponding locations. if was done on input, returns heights for each point in the order of the fft input when creating the object
-        """
-        if locations is None:
-            locations=self.pointLocation
-        # interpolator=sp.interpolate.interp1d()
-        # return np.fft.ifft(self.spectrum)
-        return reconstruction(self.fftFreqs,locations,self.filteredSpectrum(),self.pointHeight.size)
-
-    def avgSqrdReconstructionError(self):
-        return np.mean((self.reconstruction()-self.pointHeight)**2)
-
-    @classmethod
-    def fromMeanPlane(cls,meanPlane):
-        """returns a FourierAnalyzer which analyzes the residuals as defined by locations in the inputProjections"""
-        return FourierAnalyzer(meanPlane.inputResidual,meanPlane.inputInPlane)
-
-def spectral1dPowerPlot(fourierAnalyzerObj):
-    spectralPower=np.abs(np.fft.fftshift(fourierAnalyzerObj.spectrum))**2
-    plt.plot(np.fft.fftshift(fourierAnalyzerObj.fftFreqs),spectralPower,'k.-')
+def spectral1dPowerPlot(analyzerObj):
+    spectralPower=np.abs(np.fft.fftshift(analyzerObj.spectrum))**2
+    plt.plot(np.fft.fftshift(analyzerObj.fftFreqs),spectralPower,'k.-')
     # axis_font={'size':'28'}
     # plt.xlabel('frequency',**axis_font)
     # plt.ylabel('square power',**axis_font)
@@ -339,7 +205,6 @@ def spectral2dPowerPlot(fourierAnalyzerObj):
     freqProd=np.meshgrid(*fourierAnalyzerObj.fftFreqs, indexing='ij')
     ax=prep3dAxes()
     ax.plot_surface(freqProd[0],freqProd[1],spectralPower)
-
 
 def spectral2dPowerImage(fourierAnalyzerObj):
     spectralPower=np.abs(fourierAnalyzerObj.spectrum)**2
@@ -405,7 +270,7 @@ def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=2, displ
     runShowSaveClose(mp.draw2dMeanPlane,saveFigsPrepend+'_meanPlane.png',displayFig=displayFigs)
     runShowSaveClose(ft.partial(plotLogTradeRatios,mp,objHeaders),saveFigsPrepend+'_tradeRatios.png',displayFig=displayFigs)
 
-    fa=FourierSummarizerAnalyzer.fromMeanPlane(mp,freqsToKeep)
+    fa=ChebySummarizerAnalyzer.fromMeanPlane(mp,freqsToKeep)
     if displayFigs:
         fa.report()
     if saveFigsPrepend is not None:
@@ -441,20 +306,20 @@ def run3danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=3**2,dis
     if objHeaders is None:
         objHeaders=list(map(lambda n: 'obj: '+str(n),range(data.shape[1])))
     mp=lowDimMeanPlane(data) # create the mean plane
-    runShowSaveClose(mp.draw3dMeanPlane,noneSafeConcat(saveFigsPrepend,'_meanPlane.png'),displayFig=displayFigs)
-    runShowSaveClose(ft.partial(plotLogTradeRatios,mp,objHeaders),noneSafeConcat(saveFigsPrepend,'_tradeRatios.png'),displayFig=displayFigs)
+    runShowSaveClose(mp.draw3dMeanPlane,saveFigsPrepend+'_meanPlane.png',displayFig=displayFigs)
+    runShowSaveClose(ft.partial(plotLogTradeRatios,mp,objHeaders),saveFigsPrepend+'_tradeRatios.png',displayFig=displayFigs)
 
     fa=FourierSummarizerAnalyzer.fromMeanPlane(mp,freqsToKeep)
     if displayFigs:
         fa.report()
     if saveFigsPrepend is not None:
         fa.report(saveFigsPrepend+'_report.csv')
-    runShowSaveClose(ft.partial(spectral2dPowerImage,fa),noneSafeConcat(saveFigsPrepend,'_spectralPower.png'),displayFig=displayFigs)
-    runShowSaveClose(ft.partial(spectral2dPowerPlot,fa),noneSafeConcat(saveFigsPrepend,'_spectralPower3d.png'),displayFig=displayFigs)
-    runShowSaveClose(ft.partial(approximationPlot3d,mp,fa),noneSafeConcat(saveFigsPrepend,'_reverseTransform.png'),displayFig=displayFigs)
-    runShowSaveClose(ft.partial(plot3dErr,mp.inputInPlane,mp.inputResidual),noneSafeConcat(saveFigsPrepend,'_errorPlot.png'),displayFig=displayFigs)
-    runShowSaveClose(fa.powerDeclineReport,noneSafeConcat(saveFigsPrepend,'_powerDeclineReport.png'),displayFig=displayFigs)
-    runShowSaveClose(ft.partial(plotTradeRatios,mp,fa,objHeaders),noneSafeConcat(saveFigsPrepend,'_tradeoffPlot.png'),displayFig=displayFigs)
+    runShowSaveClose(ft.partial(spectral2dPowerImage,fa),saveFigsPrepend+'_spectralPower.png',displayFig=displayFigs)
+    runShowSaveClose(ft.partial(spectral2dPowerPlot,fa),saveFigsPrepend+'_spectralPower3d.png',displayFig=displayFigs)
+    runShowSaveClose(ft.partial(approximationPlot3d,mp,fa),saveFigsPrepend+'_reverseTransform.png',displayFig=displayFigs)
+    runShowSaveClose(ft.partial(plot3dErr,mp.inputInPlane,mp.inputResidual),saveFigsPrepend+'_errorPlot.png',displayFig=displayFigs)
+    runShowSaveClose(fa.powerDeclineReport,saveFigsPrepend+'_powerDeclineReport.png',displayFig=displayFigs)
+    runShowSaveClose(ft.partial(plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)
 
 def approximationPlot3d(mp,fa):
     grid_x,grid_y=np.meshgrid(np.linspace(np.min(mp.inputInPlane[:,0]),np.max(mp.inputInPlane[:,0])), np.linspace(np.min(mp.inputInPlane[:,1]),np.max(mp.inputInPlane[:,1])))
@@ -487,16 +352,6 @@ def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None,freqsToKeep=N
     runShowSaveClose(fa.powerDeclineReport,saveFigsPrepend+'_powerDeclinePlot.png',displayFig=displayFigs)
     runShowSaveClose(ft.partial(plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)
 
-def spectralGaussBlur(freqs,spectrum,bandwidth=1):
-    # kernel=np.exp(-(freqs/bandwidth)**2/2)/np.sqrt(2*np.pi)/bandwidth
-    kernel=np.exp(-(freqs/bandwidth)**2/2)
-    return spectrum*kernel
-
-def gaussBlur(input, sigma=10):
-    #need to verify this works in arbitrary dimension. No errros thrown atleast
-    # problem: fails on unevenly spaced data
-    spndf.gaussian_filter(input, sigma)
-
 class FourierSummarizer():
     def __init__(self,numToTake,wavelenth=None):
         self.numTake=numToTake
@@ -507,6 +362,7 @@ class FourierSummarizer():
         self.hasRun=False
         self.lostPower=None
 
+    #TODO: Update
     def __findFreqs(self,freqs,spectrum):
         self.hasRun=True
         spectralPower=np.abs(spectrum)**2
@@ -515,7 +371,7 @@ class FourierSummarizer():
         notTaken=sortIndx[min(2*self.numTake,spectralPower.size):]
         self.indcies=toTake
         if len(freqs.shape)>1:
-            ft=freqTuples(freqs).T
+            ft=orderTuples(freqs).T
             self.freqsTaken=ft[toTake,:]
         else:
             self.freqsTaken=freqs[toTake]
@@ -526,6 +382,7 @@ class FourierSummarizer():
     def __call__(self,freqs,spectrum):
         return self.filtering(freqs,spectrum)
 
+    #TODO: Update
     def filtering(self,freqs,spectrum):
         takeIndx=self.__findFreqs(freqs,spectrum)
         outSpectrum=np.zeros_like(spectrum)
@@ -581,10 +438,10 @@ class FourierSummarizer():
             with open(tofile,'a') as f:
                 f.writelines(('captured power: '+str(np.sum(np.abs(self.freqSpectra)**2)), 'lost power: '+str(self.lostPower)))
 
-class FourierSummarizerAnalyzer(SlowFourierAnalyzer):
-# class FourierSummarizerAnalyzer(FourierAnalyzer): # somehow phase is off or somethign in the really easy problems
+class ChebySummarizerAnalyzer(SlowChebyAnalyzer):
+    # class FourierSummarizerAnalyzer(FourierAnalyzer): # somehow phase is off or somethign in the really easy problems
     def __init__(self,pointHeight,pointLocation,frequenciesToEval=None,freqsToKeep=5):
-        super(FourierSummarizerAnalyzer, self).__init__(pointHeight,pointLocation,frequenciesToEval)
+        super(SlowChebyAnalyzer, self).__init__(pointHeight,pointLocation,frequenciesToEval)
         self.summarizer=FourierSummarizer(freqsToKeep,wavelenth=np.ptp(self.pointLocation,axis=0))
         self.addSpectralFilter(self.summarizer)
 
@@ -605,7 +462,7 @@ class FourierSummarizerAnalyzer(SlowFourierAnalyzer):
     @classmethod
     def fromMeanPlane(cls,meanPlane,freqsToKeep=5):
         """returns a FourierAnalyzer which analyzes the residuals as defined by locations in the inputProjections"""
-        return FourierSummarizerAnalyzer(meanPlane.inputResidual,meanPlane.inputInPlane,freqsToKeep=freqsToKeep)
+        return SlowChebyAnalyzer(meanPlane.inputResidual,meanPlane.inputInPlane,freqsToKeep=freqsToKeep)
 
 if __name__=="__main__":
     numsmpl=30
@@ -620,7 +477,7 @@ if __name__=="__main__":
 
     seedList=np.linspace(0,1,64)
     y=np.sin(2*np.pi*seedList)
-    fa=SlowFourierAnalyzer(y,seedList)
+    fa=SlowChebyAnalyzer(y,seedList)
     derivatives=np.array([fa.reconstructDerivative(x) for x in seedList])
     plt.figure()
     plt.plot(seedList,y,seedList,fa.reconstruction(seedList))
