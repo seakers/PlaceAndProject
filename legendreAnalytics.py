@@ -12,9 +12,9 @@ import scipy.ndimage.filters as spndf
 from common import *
 from tradeoffMatrixImage import *
 
-import numpy.polynomial.legendre as pl
+from numpy.polynomial import legendre as pl
 
-class SlowChebyAnalyzer():
+class SlowLegendreAnalyzer():
     """
     https://en.wikipedia.org/wiki/Discrete_Fourier_transform#Multidimensional_DFT
     https://en.wikipedia.org/wiki/Non-uniform_discrete_Fourier_transform#2-D_NDFT
@@ -58,6 +58,20 @@ class SlowChebyAnalyzer():
         return filteredSpectrum(self.inputFilters,self.spectralFilters,self.ordersToEval, self.pointLocation, self.pointHeight)
 
     def trueSpectrum(self):
+        freqProd=orderTuples(self.ordersToEval)
+        if len(self.pointLocation.shape)==1:
+            pointLoc=self.pointLocation[:,np.newaxis]
+        else:
+            pointLoc=self.pointLocation
+        polyTerm=
+        exponentTerm=-2*np.pi*1j*np.dot(pointLoc,freqProd)
+        # return np.dot(self.pointHeight,np.exp(exponentTerm)).reshape(self.numFreqs)/self.pointHeight.size
+        if len(self.ordersToEval.shape)>1:
+            numFreqs=list(map(len, self.ordersToEval))
+        else:
+            numFreqs=len(self.ordersToEval)
+        return np.dot(self.pointHeight,polyTerm.reshape(numFreqs)
+
         return forwardTransform(self.ordersToEval, self.pointLocation, self.pointHeight)
 
     def reconstruction(self, locations=None):
@@ -84,16 +98,7 @@ class SlowChebyAnalyzer():
     @classmethod
     def fromMeanPlane(cls,meanPlane):
         """returns a FourierAnalyzer which analyzes the residuals as defined by locations in the inputProjections"""
-        return SlowChebyAnalyzer(meanPlane.inputResidual,meanPlane.inputInPlane)
-
-#TODO: Update
-def freqTuples(freqs):
-    freqProd=np.array(freqs)
-    if len(freqProd.shape)>1:
-        freqProd=np.array(list(map(lambda arr: arr.flatten(), np.meshgrid(*freqProd))))
-    else:
-        freqProd.resize((1,len(freqProd)))
-    return freqProd
+        return SlowLegendreAnalyzer(meanPlane.inputResidual, meanPlane.inputInPlane)
 
 def forwardTransform(freqs, locations, functionVals):
     freqProd=orderTuples(freqs)
@@ -101,6 +106,7 @@ def forwardTransform(freqs, locations, functionVals):
         pointLoc=locations[:,np.newaxis]
     else:
         pointLoc=locations
+    polyTerm=
     exponentTerm=-2*np.pi*1j*np.dot(pointLoc,freqProd)
     # return np.dot(self.pointHeight,np.exp(exponentTerm)).reshape(self.numFreqs)/self.pointHeight.size
     if len(freqs.shape)>1:
@@ -108,6 +114,15 @@ def forwardTransform(freqs, locations, functionVals):
     else:
         numFreqs=len(freqs)
     return np.dot(functionVals,np.exp(exponentTerm)).reshape(numFreqs)
+
+def orderTuples(orders):
+    freqProd=np.array(orders)
+    if len(freqProd.shape)>1:
+        freqProd=np.array(list(map(lambda arr: arr.flatten(), np.meshgrid(*freqProd))))
+    else:
+        freqProd.resize((1,len(freqProd)))
+    return freqProd
+
 
 def stdNumPerSide(dataShape):
     nthRoot=int(np.ceil(dataShape[0]**(1/dataShape[1])))
@@ -438,10 +453,10 @@ class FourierSummarizer():
             with open(tofile,'a') as f:
                 f.writelines(('captured power: '+str(np.sum(np.abs(self.freqSpectra)**2)), 'lost power: '+str(self.lostPower)))
 
-class ChebySummarizerAnalyzer(SlowChebyAnalyzer):
+class ChebySummarizerAnalyzer(SlowLegendreAnalyzer):
     # class FourierSummarizerAnalyzer(FourierAnalyzer): # somehow phase is off or somethign in the really easy problems
     def __init__(self,pointHeight,pointLocation,frequenciesToEval=None,freqsToKeep=5):
-        super(SlowChebyAnalyzer, self).__init__(pointHeight,pointLocation,frequenciesToEval)
+        super(SlowLegendreAnalyzer, self).__init__(pointHeight, pointLocation, frequenciesToEval)
         self.summarizer=FourierSummarizer(freqsToKeep,wavelenth=np.ptp(self.pointLocation,axis=0))
         self.addSpectralFilter(self.summarizer)
 
@@ -462,7 +477,7 @@ class ChebySummarizerAnalyzer(SlowChebyAnalyzer):
     @classmethod
     def fromMeanPlane(cls,meanPlane,freqsToKeep=5):
         """returns a FourierAnalyzer which analyzes the residuals as defined by locations in the inputProjections"""
-        return SlowChebyAnalyzer(meanPlane.inputResidual,meanPlane.inputInPlane,freqsToKeep=freqsToKeep)
+        return SlowLegendreAnalyzer(meanPlane.inputResidual, meanPlane.inputInPlane, freqsToKeep=freqsToKeep)
 
 if __name__=="__main__":
     numsmpl=30
@@ -477,7 +492,7 @@ if __name__=="__main__":
 
     seedList=np.linspace(0,1,64)
     y=np.sin(2*np.pi*seedList)
-    fa=SlowChebyAnalyzer(y,seedList)
+    fa=SlowLegendreAnalyzer(y, seedList)
     derivatives=np.array([fa.reconstructDerivative(x) for x in seedList])
     plt.figure()
     plt.plot(seedList,y,seedList,fa.reconstruction(seedList))
