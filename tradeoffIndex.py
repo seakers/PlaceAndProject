@@ -144,11 +144,11 @@ def tradeoffIndexInPaper(paretoSamples):
     for k in range(Nobj-1):
         for l in range(k+1, Nobj):
             for i in range(Nsol):
-                # indx[i,k,l]=0
-                # for j in range(Nsol):
-                #     indx[i,k,l]+=(paretoSamples[i,k]-paretoSamples[j,k])*(paretoSamples[i,l]-paretoSamples[j,l])<0
-                # indx[i,k,l]/=(Nsol-1)
-                indx[i, k,l]=np.sum((paretoSamples[i,k]-paretoSamples[:,k])*(paretoSamples[i,l]-paretoSamples[:,l])<0)/(Nsol-1)
+                indx[i,k,l]=0
+                for j in range(Nsol):
+                    indx[i,k,l]+=(paretoSamples[i,k]-paretoSamples[j,k])*(paretoSamples[i,l]-paretoSamples[j,l])<0
+                indx[i,k,l]/=(Nsol-1)
+                # indx[i, k,l]=np.sum((paretoSamples[i,k]-paretoSamples[:,k])*(paretoSamples[i,l]-paretoSamples[:,l])<0)/(Nsol-1)
 
     # make symmetric
     for i in range(Nsol):
@@ -225,14 +225,22 @@ class TradeoffAnalyzer():
         numCrossList=-np.ones(self.nsmpl)
         for i in range(len(sortStructLeft.argArrs)):
             lCommon=sortStructLeft.argArrs[i]
-            for j in range(len(lCommon)):
-                rightAbove=sortStructRight.invArgSort[lCommon[j]]
+            rightOrdering=sortStructRight.invArgSort[lCommon]
+            disEntangle=np.argsort(rightOrdering)
+            cleanedLCommon=lCommon[disEntangle]
+            if cleanedLCommon.size == 1:
+                cleanedLCommon=(cleanedLCommon,)
+            for lElem in cleanedLCommon:
+                rightAbove=sortStructRight.invArgSort[lElem]
                 numSeenLess=bi.bisect_left(encounterList,rightAbove)
                 numSeenGreater=len(encounterList)-bi.bisect_right(encounterList, rightAbove)
-                encountered=sortStructRight.argArrs[rightAbove]
-                for encounter, encI in zip(encountered, range(len(encountered))):
-                    numCrossList[encounter]=rightAbove-numSeenLess+numSeenGreater
-                encounterList.add(rightAbove)
+                # encountered=sortStructRight.argArrs[rightAbove]
+                # for encounter, encI in zip(encountered, range(len(encountered))):
+                #     numCrossList[encounter]=rightAbove-numSeenLess+numSeenGreater
+                # encounterList.add(rightAbove)
+                numCrossList[lElem]=rightAbove-numSeenLess+numSeenGreater
+            for lElem in cleanedLCommon:
+                encounterList.add(lElem)
         return numCrossList
 
 #     def __buildBaseTable(self, axisLeftIndx, axisRightIndx):
@@ -281,18 +289,30 @@ class TradeoffAnalyzer():
         obj2count=np.tile(np.reshape(self.countBelow[sampleToFollowIndx, obj2], (len(sampleToFollowIndx), 1, len(obj2))),(1,len(obj1),1))
         return np.abs(obj2count[np.ix_(sampleToFollowIndx, obj1,obj2)]-obj1count[np.ix_(sampleToFollowIndx, obj1,obj2)])/(self.nsmpl-1) # the joys of numpy. never what youd initally expect
 
-def _basicTesting(testPts):
+def _basicTesting(testPts, silent=True):
+    if not silent:
+        print('test points')
+        print(testPts)
+
     # draw3dSurface(testPts)
-    print('test points')
-    print(testPts)
-    # tradeoffs=TradeoffAnalyzer(testPts).indicatorCovar(sampleToFollowIndx=1,obj2=2)
-    tradeoffs=fastTradeIndex(testPts[:,(0,2)])
-    refTradeoffs=tradeoffIndexInPaper(testPts)[:,0,2]
+    tradeoffs=TradeoffAnalyzer(testPts).indicatorCovar()
+    # tradeoffs=fastTradeIndex(testPts[:,(0,2)])
+    # refTradeoffs=tradeoffIndexInPaper(testPts)[:,0,2]
+    refTradeoffs=tradeoffIndexInPaper(testPts)
     maxErr=np.max(np.abs(tradeoffs-refTradeoffs))
-    print('worst error')
-    print(maxErr)
+
+    if not silent:
+        print('worst error')
+        print(maxErr)
 
     if maxErr>1e-10:
+        if silent:
+            print('test points')
+            print(testPts)
+
+            print('worst error')
+            print(maxErr)
+
         print('difference')
         print(tradeoffs-refTradeoffs)
 
@@ -305,8 +325,9 @@ def _basicTesting(testPts):
 def _timingTesting():
     # test the faster and original indicators.
     # numTest=10**np.linspace(1,6,64)
-    numTest=np.ceil(np.linspace(1,5012, 64))
+    # numTest=np.ceil(np.linspace(1,5012, 64))
     # numTest=np.ceil(np.linspace(1,1000, 2))
+    numTest=np.ceil(np.linspace(1,1024,128))
     totalNumTest=numTest[-1]
     testPts=concaveHypersphere(totalNumTest)
     timesMehmet=-np.ones(numTest.shape)
@@ -316,8 +337,8 @@ def _timingTesting():
     import timeit as tt
     import pandas as pd
 
-    # fasterCall=lambda ps: TradeoffAnalyzer(ps).indicatorCovar()
-    fasterCall=fastTradeIndex
+    fasterCall=lambda ps: TradeoffAnalyzer(ps).indicatorCovar()
+    # fasterCall=fastTradeIndex
     nRepsForCPUerr=100
     # nRepsForCPUerr=1
     for i,n in enumerate(numTest):
@@ -332,7 +353,7 @@ def _timingTesting():
         print('new'+str(timesFaster[i]))
 
     asDF=pd.DataFrame(np.vstack((timesFaster, timesMehmet)).T, index=numTest, columns=("new method","old method"))
-    asDF.to_hdf('tradeoffRunTestResults.hdf','testResults')
+    asDF.to_hdf('tradeoffRunTestResultsForLogLog.hdf','testResults')
 
     asDF.plot()
     plt.xlabel('number of points in frontier')
@@ -342,5 +363,10 @@ def _timingTesting():
 
 if __name__=="__main__":
     # testPts, res=_timingTesting()
-    testPts=concaveHypersphere(8)
-    _basicTesting(testPts)
+    # testPts=concaveHypersphere(8)
+    # _basicTesting(testPts,silent=False)
+    testPoints=np.random.randint(0,7,(128,5,2))
+    for thisTest in testPoints:
+        _basicTesting(thisTest)
+    # testPoints=np.array([[4,2],[0,3],[5,2],[5,4],[0,1]])
+    # _basicTesting(testPoints)
