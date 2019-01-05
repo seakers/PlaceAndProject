@@ -1,4 +1,7 @@
 # http://www.sfu.ca/~ssurjano/steelcol.html
+import numpy as np
+import pandas as pd
+
 # function [y] = steelcol(xx)
 #
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -47,11 +50,25 @@
 # L = 7500;
 #
 # P   = P1 + P2 + P3;
-Eb = (pi^2)*E*B*D*(H^2) / (2*(L^2));
+# Eb = (pi^2)*E*B*D*(H^2) / (2*(L^2));
+#
+# term1 = 1 / (2*B*D);
+# term2 = F0*Eb / (B*D*H*(Eb-P));
+#
+# y = Fs - P*(term1 + term2);
+#
+# end
 
-term1 = 1 / (2*B*D);
-term2 = F0*Eb / (B*D*H*(Eb-P));
+def steelCol(x):
+    Fs,  P1,  P2,  P3,  B ,  D ,  H ,  F0,  E = x
+    L=7500
+    P=P1+P2+P3
+    Eb=((np.pi**2)*E*B*D*(H**2)) / (2*(L**2))
+    term1 = 1/(2*B*D)
+    term2 = F0*Eb/(B*D*H*(Eb-P))
+    y=Fs-P*(term1+term2)
+    return y
 
-y = Fs - P*(term1 + term2);
-
-end
+def steelColCost(x):
+    Fs,  P1,  P2,  P3,  B ,  D ,  H ,  F0,  E = x
+    return meanB*meanD*meanH

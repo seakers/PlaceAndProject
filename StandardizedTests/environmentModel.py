@@ -1,4 +1,6 @@
 # http://www.sfu.ca/~ssurjano/environ.html
+import numpy as np
+import pandas as pd
 
 # function [y] = environ(xx, s, t)
 #
@@ -78,13 +80,33 @@
 #         term2 = term2a * term2b;
 #     end
 #
-    C = term1 + term2;
-    Y(ii, jj) = sqrt(4*pi) * C;
-end
-end
+#     C = term1 + term2;
+#     Y(ii, jj) = sqrt(4*pi) * C;
+# end
+# end
+#
+# % Convert the matrix into a vector (by rows).
+# Yrow = Y';
+# y = Yrow(:)';
 
-% Convert the matrix into a vector (by rows).
-Yrow = Y';
-y = Yrow(:)';
+# end
+def environ(x,s=np.arange(0.5, 2.5,0.5),t=np.arange(0.3,60,0.3)):
+    M,D,L,tau=x
+    expandT=np.broadcast_to(t,(len(s),len(t)))
+    expandS=np.broadcast_to(s,(len(t),len(s))).T
 
-end
+    term1a = M/np.sqrt(4*np.pi*D*expandT)
+    term1b = np.exp(-expandS**2/(4*D*expandT))
+    term1 = term1a*term1b
+
+    term2a = M/np.sqrt(4*np.pi*D*(expandT-tau))
+    term2b = np.exp(-(expandS-L)**2/(4*D*(expandT-tau)))
+    term2=term2a*term2b
+    term2[tau>=expandT]=0
+
+    C=term1+term2
+    Y=np.sqrt(4*np.pi) * C
+    return Y
+
+if __name__ == "__main__":
+    print(environ((1,1,1,1)))

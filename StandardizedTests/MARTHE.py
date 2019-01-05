@@ -1,3 +1,4 @@
+import pandas as pd
 # http://www.sfu.ca/~ssurjano/marthe.html
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # %
@@ -96,6 +97,43 @@
 # p29K  = marthedata(:, 25);
 # p31K  = marthedata(:, 26);
 # p35K  = marthedata(:, 27);
-p37K  = marthedata(:, 28);
-p38   = marthedata(:, 29);
-p4b   = marthedata(:, 30);"
+# p37K  = marthedata(:, 28);
+# p38   = marthedata(:, 29);
+# p4b   = marthedata(:, 30);"
+
+marthePd=pd.read_csv('marthedata.txt',sep='\t')
+
+per1 = marthePd['per1']
+per2 = marthePd['per2']
+per3 = marthePd['per3']
+perz1 = marthePd['perz1']
+perz2 = marthePd['perz2']
+perz3 = marthePd['perz3']
+perz4 = marthePd['perz4']
+d1 = marthePd['d1']
+d2 = marthePd['d2']
+d3 = marthePd['d3']
+dt1 = marthePd['dt1']
+dt2 = marthePd['dt2']
+dt3 = marthePd['dt3']
+kd1 = marthePd['kd1']
+kd2 = marthePd['kd2']
+kd3 = marthePd['kd3']
+poros = marthePd['poros']
+i1 = marthePd['i1']
+i2 = marthePd['i2']
+i3 = marthePd['i3']
+p102K = marthePd['p102K']
+p104 = marthePd['p104']
+p106 = marthePd['p106']
+p2_76 = marthePd['p2.76']
+p29K = marthePd['p29K']
+p31K = marthePd['p31K']
+p35K = marthePd['p35K']
+p37K = marthePd['p37K']
+p38 = marthePd['p38']
+p4b = marthePd['p4b']
+
+print(marthePd)
+print('per1,per2,per3,perz1,perz2,perz3,perz4,d1,d2,d3,dt1,dt2,dt3,kd1,kd2,kd3,poros,i1,i2,i3,p102K,p104,p106,p2_76,p29K,p31K,p35K,p37K,p38,p4b')
+print(per1,per2,per3,perz1,perz2,perz3,perz4,d1,d2,d3,dt1,dt2,dt3,kd1,kd2,kd3,poros,i1,i2,i3,p102K,p104,p106,p2_76,p29K,p31K,p35K,p37K,p38,p4b)
