@@ -81,17 +81,18 @@ def runProblemAnalysis(probName,metricsFile,preferenceFile):
     # runAnalysisDict[min(len(headers)-2,2)](normalizedData,headers,None) # for testing
 
 if __name__=="__main__":
-    metricsFiles=list(filter(lambda f: f[-8:]=='_met.csv', os.listdir()))
+    metricsFiles=list(filter(lambda f: f[-8:]=='_met.csv', os.listdir('./cityplotData')))
     # metricsFiles=['continuous6obj_met.csv',]
     # metricsFiles=['EOSSdownSel3_met.csv',]
     # metricsFiles=['EOSSdownSel_met.csv','GNC_scenario_9_met.csv']
     # metricsFiles=['EOSSdownSel_met.csv',]
     for metricsFile in metricsFiles:
-        if os.path.isfile(metricsFile):
-            pathParts=os.path.split(metricsFile)
+        pathedMetricFile=os.path.join('./cityplotData',metricsFile)
+        if os.path.isfile(pathedMetricFile):
+            pathParts=os.path.split(pathedMetricFile)
             probName=pathParts[-1][:-8]
             print('analyzing: '+probName)
-            # fixHeader(metricsFile)
-            runProblemAnalysis(probName,metricsFile,probName+'_pref.csv')
+            # fixHeader(pathedMetricFile)
+            runProblemAnalysis(probName,pathedMetricFile,r'./cityplotData/'+probName+'_pref.csv')
         else:
-            print('skipped file: '+metricsFile)
+            print('skipped file: '+pathedMetricFile)

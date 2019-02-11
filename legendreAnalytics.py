@@ -14,10 +14,36 @@ from tradeoffMatrixImage import *
 
 from numpy.polynomial import legendre as pl
 
+#nice reference: http://mathfaculty.fullerton.edu/mathews/n2003/LegendrePolyMod.html
+
+shorthandTable=(
+    np.array((1,)),
+    np.array((1,          0)),
+    np.array((1.5,        0,-0.5)),
+    np.array((2.5,        0,-1.5,        0)),
+    np.array((35/8,       0,-30/8,       0,3/8)),
+    np.array((63/8,       0,-70/8,       0,15/8,      0)),
+    np.array((231/16,     0,-315/16,     0,105/16,    0, -5/16)),
+    np.array((429/16,     0,-693/16,     0,315/16,    0, -35/16,    0)),
+    np.array((6435/128,   0,-12012/128,  0,6930/128,  0, -1260/128, 0, 35/128)),
+    np.array((12155/128,  0,-25740/128,  0,18018/128, 0, -4620/128, 0, 315/128, 0)),
+    np.array((46180/256,  0,-109395/256, 0,90090/256, 0, -30030/256,0, 3465/256,0, -63/256)))
+def polynomialCoeffs(n):
+    if n<len(shorthandTable):
+        return shorthandTable[n]
+    else:
+        return 2**n * np.array((sp.special.comb(n, k) * sp.special.comb((n+k-1)/2, n) for k in range(0,n+1)))
+
+def shiftPolynomialEval(locs, n):
+    return np.dot(polynomialCoeffs(n),(2*locs-1))
+
+def legendreToNewton(coeffs):
+    order=len(coeffs)
+    legendrePols=np.array([np.concatenate((np.zeros(order+1-k), polynomialCoeffs(k)) for k in range(order+1))])
+    return np.dot(legendrePols,coeffs)
+
 class SlowLegendreAnalyzer():
     """
-    https://en.wikipedia.org/wiki/Discrete_Fourier_transform#Multidimensional_DFT
-    https://en.wikipedia.org/wiki/Non-uniform_discrete_Fourier_transform#2-D_NDFT
     """
     def __init__(self,pointHeight,pointLocation,ordersToEval=None):
         """
@@ -63,14 +89,14 @@ class SlowLegendreAnalyzer():
             pointLoc=self.pointLocation[:,np.newaxis]
         else:
             pointLoc=self.pointLocation
-        polyTerm=
+        polyTerm=polynomialCoeff(len(self.pointLocation))
         exponentTerm=-2*np.pi*1j*np.dot(pointLoc,freqProd)
         # return np.dot(self.pointHeight,np.exp(exponentTerm)).reshape(self.numFreqs)/self.pointHeight.size
         if len(self.ordersToEval.shape)>1:
             numFreqs=list(map(len, self.ordersToEval))
         else:
             numFreqs=len(self.ordersToEval)
-        return np.dot(self.pointHeight,polyTerm.reshape(numFreqs)
+        return np.dot(self.pointHeight,polyTerm.reshape(numFreqs))
 
         return forwardTransform(self.ordersToEval, self.pointLocation, self.pointHeight)
 
@@ -100,33 +126,15 @@ class SlowLegendreAnalyzer():
         """returns a FourierAnalyzer which analyzes the residuals as defined by locations in the inputProjections"""
         return SlowLegendreAnalyzer(meanPlane.inputResidual, meanPlane.inputInPlane)
 
-def forwardTransform(freqs, locations, functionVals):
-    freqProd=orderTuples(freqs)
+def forwardTransform(orders, locations, functionVals):
     if len(locations.shape)==1:
         pointLoc=locations[:,np.newaxis]
     else:
         pointLoc=locations
-    polyTerm=
-    exponentTerm=-2*np.pi*1j*np.dot(pointLoc,freqProd)
-    # return np.dot(self.pointHeight,np.exp(exponentTerm)).reshape(self.numFreqs)/self.pointHeight.size
-    if len(freqs.shape)>1:
-        numFreqs=list(map(len, freqs))
-    else:
-        numFreqs=len(freqs)
-    return np.dot(functionVals,np.exp(exponentTerm)).reshape(numFreqs)
-
-def orderTuples(orders):
-    freqProd=np.array(orders)
-    if len(freqProd.shape)>1:
-        freqProd=np.array(list(map(lambda arr: arr.flatten(), np.meshgrid(*freqProd))))
-    else:
-        freqProd.resize((1,len(freqProd)))
-    return freqProd
-
-
-def stdNumPerSide(dataShape):
-    nthRoot=int(np.ceil(dataShape[0]**(1/dataShape[1])))
-    return (nthRoot,)*dataShape[1]
+    #assert orders same length as 2nd axis of pointLoc
+    polyTerm=[shiftPolynomialEval(len(pointLoc[:,dim]),o) for dim,o in enumerate(orders)]
+    coeffs=[(2*np.arange(0,o)+1)/2*np.dot(functionVals,polyTerm[dim])/len(functionVals) for dim, o in enumerate(orders)]
+    return np.array(coeffs)
 
 def filteredSpectrum(inputFilters, spectralFilters,frequencies,locations,heights,forwardTransform=forwardTransform):
     filtLoc=locations
@@ -138,21 +146,16 @@ def filteredSpectrum(inputFilters, spectralFilters,frequencies,locations,heights
         ret=filt(frequencies,ret)
     return ret
 
-def reconstruction(freqs, locations, spectrum,numPts):
-
-    freqProd=np.array(freqs)
-    if len(freqProd.shape)>1:
-        freqProd=np.array(list(map(lambda arr: arr.flatten(), np.meshgrid(*freqProd))))
-    else:
-        freqProd.resize((1,len(freqProd)))
-    spectrum=spectrum.flatten()
-    spectrum=spectrum[np.newaxis,:]
+def reconstruction(unused, locations, coeffs,unusedNumPts):
     if len(locations.shape)==1:
         pointLoc=locations[:,np.newaxis]
     else:
         pointLoc=locations
-    exponentTerm=2*np.pi*1j*np.dot(freqProd.T,pointLoc.T)
-    return np.squeeze(np.dot(spectrum,np.exp(exponentTerm)))/numPts
+    interps=np.zeros(heights.shape)
+    for dim, c in enumerate(coeffs):
+        x=np.vander(pointLoc[:,dim],n+1)
+        interps+=np.dot(c,x)
+    return interps
 
 def reconstructDerivative(freqs, locations, spectrum, numPts):
     """
@@ -163,57 +166,20 @@ def reconstructDerivative(freqs, locations, spectrum, numPts):
     :param numPts:
     :return: derivative of iFFT of the spectrum as an array with shape (Npts, Ncomponent) or (Ncomponent,) if 1-d
     """
-    if not len(locations.shape) == 0 and locations.shape[1] != 1:
-        assert locations.shape[0]==1 and locations.shape[1]>1
-        # TODO make consistent behavior. should have 1st index index over array of locations, 2nd index index is over components of output, 3rd is over input components
-        accum=[]
-        for compIndx in range(locations.size):
-            broadcastArr=np.ones(len(spectrum.shape))
-            broadcastArr[compIndx]=freqs.shape[1]
-            freqMultiplier=2*np.pi*1j*np.reshape(np.squeeze(freqs[compIndx,:]),broadcastArr)
-            accum.append(reconstruction(freqs, locations, freqMultiplier*spectrum, numPts))
-        return np.array(accum).T
-    else:
-        return reconstruction(freqs,locations,2*np.pi*1j*freqs*spectrum,numPts) # should be scalar
-
-def orderLocations1d(pointLocations):
-    """
-    returns an indexing array to place points in the proper locations
-    :param pointLocations:
-    :return:
-    """
-    return np.argsort(pointLocations)
-
-def orderLocations(xy):
-    """
-    reorders elements of an array-of-arrays such that the elements are in a monotonic order.
-
-
-    :param xy: an nxd array of locations in 2d to sort
-    :return:
-    """
-    raise NotImplementedError
+    derivativedCoeffs=(np.ones(spectrum.shape[1])[:,np.newaxis]*np.flip(np.arange(1,spectrum.shape[0]+1))[np.newaxis,:]) * spectrum[:-1,:]
+    return reconstruction(freqs, locations, derivativedCoeffs,numPts)
 
 class OptionNotSupportedError(Exception):
     pass
 
 def spectral1dPowerPlot(analyzerObj):
-    spectralPower=np.abs(np.fft.fftshift(analyzerObj.spectrum))**2
+    spectralPower=np.abs(analyzerObj.spectrum)**2
     plt.plot(np.fft.fftshift(analyzerObj.fftFreqs),spectralPower,'k.-')
     # axis_font={'size':'28'}
     # plt.xlabel('frequency',**axis_font)
     # plt.ylabel('square power',**axis_font)
     plt.xlabel('frequency')
     plt.ylabel('square power')
-def spectral1dPhasePlot(fourierAnalyzerObj):
-    spectralPhase=np.angle(np.fft.fftshift(fourierAnalyzerObj.spectrum))
-    # print(spectralPhase)
-    plt.plot(np.fft.fftshift(fourierAnalyzerObj.fftFreqs),spectralPhase,'k.-')
-    # axis_font={'size':'28'}
-    # plt.xlabel('frequency',**axis_font)
-    # plt.ylabel('phase (radians)',**axis_font)
-    plt.xlabel('frequency')
-    plt.ylabel('phase (radians)')
 
 def spectral2dPowerPlot(fourierAnalyzerObj):
     spectralPower=np.abs(fourierAnalyzerObj.spectrum)**2
@@ -223,14 +189,11 @@ def spectral2dPowerPlot(fourierAnalyzerObj):
 
 def spectral2dPowerImage(fourierAnalyzerObj):
     spectralPower=np.abs(fourierAnalyzerObj.spectrum)**2
-    # plt.imshow(np.fft.fftshift(spectralPower),cmap=globalCmap,interpolation='nearest')
-    plt.imshow(np.fft.fftshift(spectralPower),cmap=globalCmap,interpolation='nearest')
+    plt.imshow(spectralPower,cmap=globalCmap,interpolation='nearest')
     plt.colorbar()
-    shiftedFFTF=np.fft.fftshift(fourierAnalyzerObj.fftFreqs,axes=1)
+    shiftedFFTF=fourierAnalyzerObj.fftFreqs
     plt.xticks(np.arange(len(shiftedFFTF[0])), numpyToPrettyStr(shiftedFFTF[0]), rotation=60)
     plt.yticks(np.arange(len(shiftedFFTF[1])), numpyToPrettyStr(shiftedFFTF[1]))
-    # plt.xticks(np.arange(len(fourierAnalyzerObj.fftFreqs[0])), fourierAnalyzerObj.fftFreqs[0], rotation=60)
-    # plt.yticks(np.arange(len(fourierAnalyzerObj.fftFreqs[1])), fourierAnalyzerObj.fftFreqs[1])
 
 def approximationPlot2d(meanPlane, analyzer,objLabels=None):
     dummyTest2d=meanPlane.paretoSamples
@@ -490,14 +453,22 @@ if __name__=="__main__":
     # run2danalysis(dummyTest2d,saveFigsPrepend='testSave')
     # run2danalysis(dummyTest2d)
 
-    seedList=np.linspace(0,1,64)
-    y=np.sin(2*np.pi*seedList)
-    fa=SlowLegendreAnalyzer(y, seedList)
-    derivatives=np.array([fa.reconstructDerivative(x) for x in seedList])
-    plt.figure()
-    plt.plot(seedList,y,seedList,fa.reconstruction(seedList))
-    plt.figure()
-    plt.plot(seedList,2*np.pi*np.cos(2*np.pi*seedList),seedList,derivatives)
-    plt.show()
-# TODO: Report basis vector directions for interpretign direction in fourier analysis
-# TODO: make sure normal vector points in one particular direction
+    # seedList=np.linspace(0,1,64)
+    # y=np.sin(2*np.pi*seedList)
+    # fa=SlowLegendreAnalyzer(y, seedList)
+    # derivatives=np.array([fa.reconstructDerivative(x) for x in seedList])
+    # plt.figure()
+    # plt.plot(seedList,y,seedList,fa.reconstruction(seedList))
+    # plt.figure()
+    # plt.plot(seedList,2*np.pi*np.cos(2*np.pi*seedList),seedList,derivatives)
+    # plt.show()
+
+    #draw basis functions
+    # for n in range(6):
+    #     polycoeffs=polynomialCoeffs(n)
+    #     lsp=np.linspace(-1,1,256)
+    #     x=np.array([lsp**k for k in reversed(list(range(n+1)))])
+    #     x=np.vander(lsp,n+1)
+    #     interps=np.dot(polycoeffs,x)
+    #     plt.plot(lsp,interps)
+    # plt.show()
