@@ -28,6 +28,7 @@ shorthandTable=(
     np.array((6435/128,   0,-12012/128,  0,6930/128,  0, -1260/128, 0, 35/128)),
     np.array((12155/128,  0,-25740/128,  0,18018/128, 0, -4620/128, 0, 315/128, 0)),
     np.array((46180/256,  0,-109395/256, 0,90090/256, 0, -30030/256,0, 3465/256,0, -63/256)))
+
 def polynomialCoeffs(n):
     if n<len(shorthandTable):
         return shorthandTable[n]
@@ -41,6 +42,11 @@ def legendreToNewton(coeffs):
     order=len(coeffs)
     legendrePols=np.array([np.concatenate((np.zeros(order+1-k), polynomialCoeffs(k)) for k in range(order+1))])
     return np.dot(legendrePols,coeffs)
+
+def newtonToLegendre(coeffs):
+    order=len(coeffs)
+    legendrePols=np.array([np.concatenate((np.zeros(order+1-k), polynomialCoeffs(k)) for k in range(order+1))])
+    return np.linalg.solv(legendrePols, coeffs)
 
 class SlowLegendreAnalyzer():
     """
