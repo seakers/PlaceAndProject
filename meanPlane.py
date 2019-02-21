@@ -75,6 +75,12 @@ class MeanPlane():
         """
         return np.tile(self.normalVect[:,np.newaxis],(1,len(self.normalVect)))/np.tile(self.normalVect[np.newaxis,:],(len(self.normalVect),1))
 
+    def pointsInOriginalCoors(self,coorsInMeanPlaneSubspace):
+        if len(coorsInMeanPlaneSubspace.shape) == 1:
+            return np.dot(coorsInMeanPlaneSubspace[:,np.newaxis],np.squeeze(self.basisVects)[np.newaxis,:])+self.meanPoint[np.newaxis,:]
+        else:
+            return np.dot(coorsInMeanPlaneSubspace,self.basisVects)+self.meanPoint[np.newaxis,:]
+
 class NotPointingToOriginError(MeanPlaneError):
     pass
 

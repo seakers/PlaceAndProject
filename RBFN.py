@@ -10,6 +10,8 @@ but it's rather poor and rudimentary, so made lots of mods
 """
 
 import numpy as np
+import scipy as sp
+import numpy.linalg as npl
 from common import *
 
 class RBFN(object):
@@ -27,8 +29,20 @@ class RBFN(object):
         self.centers = None
         self.weights = None
 
+    def _vectorized_exponential(self, radial):
+        return np.exp(-radial/self.sigma)
+
     def _kernel_function(self, center, data_point):
         return np.exp(-np.linalg.norm(center-data_point)**2/self.sigma)
+
+    def _vectorized_interoplation_matrix(self,X):
+        if len(X.shape)==1:
+            locs=X[:,np.newaxis]
+            cents=self.centers[:,np.newaxis]
+        else:
+            locs=X
+            cents=self.centers
+        return self._vectorized_exponential(sp.spatial.distance.cdist(locs, cents))
 
     def _calculate_interpolation_matrix(self, X):
         """ Calculates interpolation matrix using a kernel_function
@@ -61,8 +75,8 @@ class RBFN(object):
             Y: (num_data_samples, input_shape)
         """
         self.centers = self._select_centers(X)
-        G = self._calculate_interpolation_matrix(X)
-        self.weights, _, _, _= np.linalg.lstsq(G,Y)
+        G = self._vectorized_interoplation_matrix(X)
+        self.weights, _, _, _= np.linalg.lstsq(G,Y, rcond=None)
 
     def predict(self, X):
         """
@@ -72,7 +86,7 @@ class RBFN(object):
             (num_test_samples, input_shape)
         """
         tX=numpyze(X)
-        G = self._calculate_interpolation_matrix(tX)
+        G = self._vectorized_interoplation_matrix(tX)
         predictions = np.dot(G, self.weights)
         return predictions
 
@@ -83,9 +97,14 @@ class RBFN(object):
         :return: gradient vector in components of X. (#pointsInput x dimensionality)
         """
         tX=numpyze(X)
-        G= self._calculate_interpolation_matrix(tX)
+        G= self._vectorized_interoplation_matrix(tX)
         Gw=G*self.weights[np.newaxis,:]
-        d= np.dot(X, -self.centers.T/self.sigma)
+        d=np.zeros((Gw.shape[0], self.centers.shape[1]))
+        if len(tX.shape)==1:
+            tX=tX.reshape((1,len(tX)))
+        for i in range(d.shape[0]):
+            for j in range(d.shape[1]):
+                d[i,j]=(tX[j,:]-self.centers[i,:])/self.sigma
         return 2*np.dot(Gw, d)
 
     def hessian(self,X):

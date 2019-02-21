@@ -7,10 +7,10 @@ import matplotlib.pyplot as plt
 import scipy.ndimage.filters as spndf
 import numpy.polynomial.legendre as leg
 
-from common import *
-from meanPlane import *
-from tradeoffMatrixImage import *
-from analyticsCommon import *
+import common as cmn
+import meanPlane as mP
+import tradeoffMatrixImage as tMI
+import analyticsCommon as aC
 
 from numpy.polynomial import legendre as pl
 
@@ -23,13 +23,18 @@ class SlowLegendreAnalyzer():
         self.pointHeight=pointHeight
         self.pointLocation=pointLocation
         if ordersToEval is None:
-            self.ordersToEval=numpyze(self.pointHeight.size-1)
+            if len(pointLocation.shape)==1:
+                self.ordersToEval=cmn.numpyze(self.pointHeight.size-1)
+            else:
+                nthRoot=cmn.incToEven(np.ceil(pointHeight.size**(1/pointLocation.shape[1])))
+                self.ordersToEval=np.array([nthRoot,]*pointLocation.shape[1])
         else:
-            self.ordersToEval=numpyze(ordersToEval)
-        if len(self.ordersToEval.shape) ==1:
+            self.ordersToEval=cmn.numpyze(self.ordersToEval)
+        self.ordersToEval=self.ordersToEval.astype(int)
+        if len(self.pointLocation.shape) ==1:
             self.fullOrders=np.arange(pointHeight.size)
         else:
-            self.fullOrders=np.concatenate(list((np.arange(d+1) for d in self.ordersToEval)),axis=1)
+            self.fullOrders=np.array(list((np.arange(d+1) for d in self.ordersToEval)))
         self.spectralFilters=[]
         self.inputFilters=[]
 
@@ -51,7 +56,7 @@ class SlowLegendreAnalyzer():
         return self.filteredSpectrum()
 
     def filteredSpectrum(self):
-        return filteredSpectrum(self.inputFilters,self.spectralFilters,self.fullOrders, self.pointLocation, self.pointHeight, self.forwardTransform)
+        return aC.filteredSpectrum(self.inputFilters,self.spectralFilters,self.fullOrders, self.pointLocation, self.pointHeight, self.forwardTransform)
 
     def forwardTransform(self,orders, locations, functionVals): # ugly hack to change orders variable
         return forwardTransform(self.ordersToEval, locations, functionVals)
@@ -99,29 +104,81 @@ def legendreToNewton(legCoeffs):
 def newtonToLegendre(newtonCoeffs):
     return np.polynomial.polynomial.Polynomial(newtonCoeffs).convert(kind=leg.Legendre)
 
+def genericLegVander(locations, deg):
+    # stolen straight from legvander3d and modified
+    n=locations.shape[1]
+    ideg = [int(d) for d in deg]
+    is_valid = [id == d and id >= 0 for id, d in zip(ideg, deg)]
+    if is_valid != [True,]*n:
+        raise ValueError("degrees must be non-negative integers")
+
+    vi=[leg.legvander(locations[:,i], deg[i]) for i in range(n)]
+    indexingTuples=[]
+    raise NotImplementedError
+    # v = vx[..., None, None]*vy[..., None,:, None]*vz[..., None, None,:]
+    return v.reshape(v.shape[:-n] + (-1,))
+
+def genericLegVal(locations, coeffs):
+    if len(locations.shape)==1:
+        return leg.legval(locations,coeffs)
+    else: # assume dim 0 is points, dim 1 is dimensions
+        c=leg.legval(locations[:,0], coeffs)
+        for i in range(1, locations.shape[1]):
+            c=leg.legval(locations[:,i],c, tensor=False)
+        return c
+
+
+def legvander4d(locations, deg):
+    # stolen straight from legvander3d and mondified
+    n=locations.shape[1]
+    ideg = [int(d) for d in deg]
+    is_valid = [id == d and id >= 0 for id, d in zip(ideg, deg)]
+    if is_valid != [True,]*n:
+        raise ValueError("degrees must be non-negative integers")
+
+    vi=[leg.legvander(locations[:,i], deg[i]) for i in range(n)]
+    v = vi[0][..., None, None, None]*vi[1][..., None,:,None, None]*vi[2][..., None, None,:,None]*vi[3][...,None,None,None,:]
+    return v.reshape(v.shape[:-n] + (-1,))
+
+def legvander5d(locations, deg):
+    # stolen straight from legvander3d and modified
+    n=locations.shape[1]
+    ideg = [int(d) for d in deg]
+    is_valid = [id == d and id >= 0 for id, d in zip(ideg, deg)]
+    if is_valid != [True,]*n:
+        raise ValueError("degrees must be non-negative integers")
+
+    vi=[leg.legvander(locations[:,i], deg[i]) for i in range(n)]
+    v = vi[0][..., None, None, None, None]*vi[1][..., None,:,None, None, None]*vi[2][..., None, None,:,None,None]*vi[3][...,None,None,None,:,None]*vi[4][...,None,None,None,None,:]
+    return v.reshape(v.shape[:-n] + (-1,))
+
 def forwardTransform(orders, locations, functionVals):
     if len(locations.shape)==1:
         return np.array(leg.legfit(locations, functionVals, orders[0]))
     else:
-        if len(locations.shape)==2:
-            V=leg.legvander2d(locations[0], locations[1], orders)
-        elif len(locations.shape)==3:
-            V=leg.legvander3d(locations[0],locations[1],locations[2], orders)
+        if locations.shape[1]==2:
+            V=leg.legvander2d(locations[:,0], locations[:,1], orders)
+        elif locations.shape[1]==3:
+            V=leg.legvander3d(locations[:,0],locations[:,1],locations[:,2], orders)
+        elif locations.shape[1]==4:
+            V=legvander4d(locations,orders)
+        elif locations.shape[1]==5:
+            V=legvander5d(locations,orders)
         else:
             raise NotImplementedError
-        ret, _, _, _=npl.lstsq(V, functionVals)
-        return ret
+        ret, _, _, _=npl.lstsq(V, functionVals, rcond=None)
+        return np.reshape(ret, np.array(orders)+1)
 
-def reconstruction(unused, locations, coeffs,unusedNumPts):
+def reconstruction(orders, locations, coeffs,unusedNumPts):
     if len(locations.shape)==1:
         return np.array(leg.legval(locations, coeffs))
     else:
-        if len(locations.shape)==2:
-            return leg.legval2d(locations[0], locations[1], coeffs)
-        elif len(locations.shape)==3:
-            return leg.legval3d(locations[0],locations[1],locations[2], coeffs)
+        if locations.shape[1] == 2:
+            return leg.legval2d(locations[:,0], locations[:,1], coeffs)
+        elif locations.shape[1] == 3:
+            return leg.legval3d(locations[:,0],locations[:,1],locations[:,2], coeffs)
         else:
-            raise NotImplementedError
+            return genericLegVal(locations, coeffs)
 
 def reconstructDerivative(freqs, locations, spectrum, numPts):
     """
@@ -147,7 +204,7 @@ def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=10, disp
     """
     if objHeaders is None:
         objHeaders=list(map(lambda n: 'obj: '+str(n),range(data.shape[1])))
-    mp=lowDimMeanPlane(data) # create the mean plane
+    mp=mP.lowDimMeanPlane(data) # create the mean plane
 
     if saveFigsPrepend is not None:
         mps=saveFigsPrepend+'_meanPlane.png'
@@ -160,8 +217,8 @@ def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=10, disp
         spts=None
         rts=None
 
-    runShowSaveClose(mp.draw2dMeanPlane,mps,displayFig=displayFigs)
-    runShowSaveClose(ft.partial(plotLogTradeRatios,mp,objHeaders),trs,displayFig=displayFigs)
+    aC.runShowSaveClose(mp.draw2dMeanPlane,mps,displayFig=displayFigs)
+    aC.runShowSaveClose(ft.partial(tMI.plotLogTradeRatios,mp,objHeaders),trs,displayFig=displayFigs)
 
     fa=LegendreSummarizerAnalyzer.fromMeanPlane(mp,freqsToKeep)
     if displayFigs:
@@ -169,10 +226,10 @@ def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=10, disp
     if saveFigsPrepend is not None:
         fa.report(saveFigsPrepend+'_report.csv')
 
-    runShowSaveClose(ft.partial(spectral1dPowerPlot_nonFFT,fa),spts,displayFig=displayFigs)
+    aC.runShowSaveClose(ft.partial(aC.spectral1dPowerPlot_nonFFT,fa),spts,displayFig=displayFigs)
 
-    runShowSaveClose(ft.partial(approximationPlot2d_nonFFT,mp,fa,objHeaders),rts,displayFig=displayFigs)
-    # runShowSaveClose(ft.partial(plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)
+    aC.runShowSaveClose(ft.partial(aC.approximationPlot2d,mp,fa,objHeaders),rts,displayFig=displayFigs)
+    # aC.runShowSaveClose(ft.partial(plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)
     return (mp,fa)
 
 def run3danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=3**2,displayFigs=True):
@@ -183,21 +240,21 @@ def run3danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=3**2,dis
     """
     if objHeaders is None:
         objHeaders=list(map(lambda n: 'obj: '+str(n),range(data.shape[1])))
-    mp=lowDimMeanPlane(data) # create the mean plane
-    runShowSaveClose(mp.draw3dMeanPlane,saveFigsPrepend+'_meanPlane.png',displayFig=displayFigs)
-    runShowSaveClose(ft.partial(plotLogTradeRatios,mp,objHeaders),saveFigsPrepend+'_tradeRatios.png',displayFig=displayFigs)
+    mp=mP.lowDimMeanPlane(data) # create the mean plane
+    aC.runShowSaveClose(mp.draw3dMeanPlane,saveFigsPrepend+'_meanPlane.png',displayFig=displayFigs)
+    aC.runShowSaveClose(ft.partial(tMI.plotLogTradeRatios,mp,objHeaders),saveFigsPrepend+'_tradeRatios.png',displayFig=displayFigs)
 
     fa=LegendreSummarizerAnalyzer.fromMeanPlane(mp,freqsToKeep)
     if displayFigs:
         fa.report()
     if saveFigsPrepend is not None:
         fa.report(saveFigsPrepend+'_report.csv')
-    runShowSaveClose(ft.partial(spectral2dPowerImage_nonFFT,fa),saveFigsPrepend+'_spectralPower.png',displayFig=displayFigs)
-    runShowSaveClose(ft.partial(spectral2dPowerPlot_nonFFT,fa),saveFigsPrepend+'_spectralPower3d.png',displayFig=displayFigs)
-    runShowSaveClose(ft.partial(approximationPlot3d,mp,fa),saveFigsPrepend+'_reverseTransform.png',displayFig=displayFigs)
-    runShowSaveClose(ft.partial(plot3dErr,mp.inputInPlane,mp.inputResidual),saveFigsPrepend+'_errorPlot.png',displayFig=displayFigs)
-    runShowSaveClose(fa.powerDeclineReport,saveFigsPrepend+'_powerDeclineReport.png',displayFig=displayFigs)
-    # runShowSaveClose(ft.partial(plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)
+    aC.runShowSaveClose(ft.partial(aC.spectral2dPowerImage_nonFFT,fa),saveFigsPrepend+'_spectralPower.png',displayFig=displayFigs)
+    aC.runShowSaveClose(ft.partial(aC.spectral2dPowerPlot_nonFFT,fa),saveFigsPrepend+'_spectralPower3d.png',displayFig=displayFigs)
+    aC.runShowSaveClose(ft.partial(aC.approximationPlot3d,mp,fa),saveFigsPrepend+'_reverseTransform.png',displayFig=displayFigs)
+    aC.runShowSaveClose(ft.partial(aC.plot3dErr,mp.inputInPlane,mp.inputResidual),saveFigsPrepend+'_errorPlot.png',displayFig=displayFigs)
+    aC.runShowSaveClose(fa.powerDeclineReport,saveFigsPrepend+'_powerDeclineReport.png',displayFig=displayFigs)
+    # aC.runShowSaveClose(ft.partial(plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)
 
 def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None,freqsToKeep=None,displayFigs=True):
     """
@@ -207,9 +264,9 @@ def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None,freqsToKeep=N
     """
     if objHeaders is None:
         objHeaders=list(map(lambda n: 'obj: '+str(n),range(data.shape[1])))
-    mp=lowDimMeanPlane(data) # create the mean plane
+    mp=mP.lowDimMeanPlane(data) # create the mean plane
 
-    runShowSaveClose(ft.partial(plotLogTradeRatios,mp,objHeaders),saveFigsPrepend+'_tradeRatios.png',displayFig=displayFigs)
+    aC.runShowSaveClose(ft.partial(tMI.plotLogTradeRatios,mp,objHeaders),saveFigsPrepend+'_tradeRatios.png',displayFig=displayFigs)
 
     if freqsToKeep is None:
         freqsToKeep=2**data.shape[1]
@@ -219,8 +276,8 @@ def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None,freqsToKeep=N
     if saveFigsPrepend is not None:
         fa.report(saveFigsPrepend+'_report.csv')
 
-    runShowSaveClose(fa.powerDeclineReport,saveFigsPrepend+'_powerDeclinePlot.png',displayFig=displayFigs)
-    runShowSaveClose(ft.partial(plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)
+    aC.runShowSaveClose(fa.powerDeclineReport,saveFigsPrepend+'_powerDeclinePlot.png',displayFig=displayFigs)
+    # aC.runShowSaveClose(ft.partial(tMI.plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)
 
 class PolynomialSummarizer():
     def __init__(self,numToTake,wavelenth=None):
@@ -262,7 +319,7 @@ class PolynomialSummarizer():
 
     def _toDataFrame(self):
         if not self.hasRun:
-            raise InitializeRunFailError
+            raise cmn.InitializeRunFailError
         if len(self.freqsTaken.shape)>1:
             toUse=np.squeeze(self.freqsTaken[:,0]>0)
             ft=self.freqsTaken[toUse,:]
@@ -290,11 +347,11 @@ class PolynomialSummarizer():
     def powerDeclineReport(self):
         # plt.fill(np.arange(len(self.freqSpectra)),np.abs(self.freqSpectra)**2)
         # plt.plot(np.arange(len(self.freqSpectra)),np.abs(self.freqSpectra)**2)
-        plt.bar(np.arange(len(self.freqSpectra)),np.abs(self.freqSpectra)**2,color=globalBarPlotColor)
+        plt.bar(np.arange(len(self.freqSpectra)),np.abs(self.freqSpectra)**2,color=cmn.globalBarPlotColor)
         if len(self.freqsTaken.shape)>1:
-            plt.xticks(range(len(self.freqsTaken)),multiDimNumpyToPrettyStr(self.freqsTaken), rotation=75)
+            plt.xticks(range(len(self.freqsTaken)),cmn.multiDimNumpyToPrettyStr(self.freqsTaken), rotation=75)
         else:
-            plt.xticks(range(len(self.freqsTaken)),numpyToPrettyStr(self.freqsTaken), rotation=75)
+            plt.xticks(range(len(self.freqsTaken)),cmn.numpyToPrettyStr(self.freqsTaken), rotation=75)
         plt.ylabel('squared power of component')
         plt.xlabel('representative frequency')
 
@@ -317,14 +374,14 @@ class LegendreSummarizerAnalyzer(SlowLegendreAnalyzer):
     def report(self, tofile=None):
         try:
             self.summarizer.report(tofile)
-        except(InitializeRunFailError):
+        except(cmn.InitializeRunFailError):
             self.filteredSpectrum() # hack to force computation
             self.summarizer.report(tofile)
 
     def powerDeclineReport(self):
         try:
             self.summarizer.powerDeclineReport()
-        except(InitializeRunFailError):
+        except(cmn.InitializeRunFailError):
             self.filteredSpectrum() # hack to force computation
             self.summarizer.powerDeclineReport()
 

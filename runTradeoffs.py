@@ -1,5 +1,8 @@
 from common import *
-from fourierAnalytics import *
+import fourierAnalytics as fA
+import rbfAnalytics as rA
+import simplerLegendreAnalytics as lA
+import itertools as it
 import numpy as np
 import pandas as pd
 import os
@@ -8,6 +11,7 @@ import operator as op
 import warnings as w
 
 import meanPlane as mp
+import comparePlots as cP
 
 def anyCompetion(sample):
     ranks=np.argsort(sample, axis=0)
@@ -48,7 +52,10 @@ def fixHeader(filename):
     with open(filename,'w') as f:
         f.writelines(clean)
 
-def runProblemAnalysis(probName,metricsFile,preferenceFile):
+def dummyPass(*args, **kwargs):
+    pass
+
+def runProblemAnalysis(probName,metricsFile,preferenceFile, module, filePrepend="./output/"):
     dataRead=pd.read_csv(metricsFile)
     headers=dataRead.columns.values
 
@@ -72,20 +79,50 @@ def runProblemAnalysis(probName,metricsFile,preferenceFile):
     if np.any(meanCoop):
         w.warn('detected average cooperation in problem: '+probName)
         printCooperating(meanCoop, headers)
-    runAnalysisDict=[run2danalysis,run3danalysis,runHighDimAnalysis]
+    runAnalysisDict=[module.run2danalysis,module.run3danalysis,module.runHighDimAnalysis]
+    # runAnalysisDict=[module.run2danalysis,module.run3danalysis,dummyPass]
     try:
-        runAnalysisDict[min(len(headers)-2,2)](normalizedData,correctedHeaders,probName,displayFigs=False)
+        runAnalysisDict[min(len(headers)-2,2)](normalizedData,correctedHeaders,filePrepend+probName,displayFigs=False)
     except mp.NotPointingToOriginError as valErr:
         # print('not pointing to origin: valErr')
         w.warn('not pointing to origin:'+str(valErr))
     # runAnalysisDict[min(len(headers)-2,2)](normalizedData,headers,None) # for testing
 
+def runComparisons(probName,metricsFile,preferenceFile, filePrepend="./output/"):
+    dataRead=pd.read_csv(metricsFile)
+    headers=dataRead.columns.values
+
+    # read preference file and get whether will need to multiply by -1 to make minimization
+    with open(preferenceFile) as f:
+        f.readline()
+        prefVect=f.readline()
+    minMaxDict={'min':1, 'max':-1}
+    correctedHeaders=headers
+
+    isMax=np.array(list(map(lambda e: e.strip()=='max',prefVect.split(','))))
+    multiplier=-2*isMax+1
+    sameDirVals=dataRead.values*multiplier[np.newaxis,:]
+    appendDict=['','neg. ']
+    correctedHeaders=[appendDict[int(isM)]+s for isM,s in zip(isMax,correctedHeaders)]
+
+    normalizedData=(sameDirVals-sameDirVals.min(axis=0)[np.newaxis,:])/np.ptp(sameDirVals,axis=0)[np.newaxis,:]
+    correctedHeaders=['FoR '+s for s in correctedHeaders] # "FoR" stands for "Fraction of Range" and corresponds to the normalization of the dataset by min-max.
+
+    meanCoop=covarCompete(normalizedData)
+    if np.any(meanCoop):
+        w.warn('detected average cooperation in problem: '+probName)
+        printCooperating(meanCoop, headers)
+    cP.paramAccuracyPlot(normalizedData,(fA.FourierSummarizerAnalyzer, lA.LegendreSummarizerAnalyzer, rA.rbfSummarizerAnalyzer),
+                         analyzerClassNames=('fourier series','legendre polynomials','exponential RBF NN'))
+
 if __name__=="__main__":
-    metricsFiles=list(filter(lambda f: f[-8:]=='_met.csv', os.listdir('./cityplotData')))
+    metricsFiles=list(filter(lambda f: f[-8:]=='_met.csv' and not f.contains('walker'), os.listdir('./cityplotData')))
     # metricsFiles=['continuous6obj_met.csv',]
     # metricsFiles=['EOSSdownSel3_met.csv',]
     # metricsFiles=['EOSSdownSel_met.csv','GNC_scenario_9_met.csv']
     # metricsFiles=['EOSSdownSel_met.csv',]
+    # metricsFiles=['GNC_scenario_1_met.csv',]
+    # metricsFiles=metricsFiles[8:]
     for metricsFile in metricsFiles:
         pathedMetricFile=os.path.join('./cityplotData',metricsFile)
         if os.path.isfile(pathedMetricFile):
@@ -93,6 +130,9 @@ if __name__=="__main__":
             probName=pathParts[-1][:-8]
             print('analyzing: '+probName)
             # fixHeader(pathedMetricFile)
-            runProblemAnalysis(probName,pathedMetricFile,r'./cityplotData/'+probName+'_pref.csv')
+            # runProblemAnalysis(probName,pathedMetricFile,r'./cityplotData/'+probName+'_pref.csv', fA, filePrepend=r'./output/fourier_')
+            # runProblemAnalysis(probName,pathedMetricFile,r'./cityplotData/'+probName+'_pref.csv', lA, filePrepend=r'./output/legendre_')
+            # runProblemAnalysis(probName,pathedMetricFile,r'./cityplotData/'+probName+'_pref.csv', rA, filePrepend=r'./output/rbf_')
+            runComparisons(probName, pathedMetricFile, r'./cityplotData/'+probName+'_pref.csv')
         else:
             print('skipped file: '+pathedMetricFile)

@@ -16,6 +16,11 @@ globalBarPlotColor='#cc6600'
 # globalPlaneColor=[.5,.5,.5]
 globalPlaneColor=[204./255.,102./255.,0]
 
+def incToEven(i):
+    return i+(i%2)
+def decToEven(i):
+    return i-(i%2)
+
 def concaveHypersphere(numTest):
     """returns a set of random points on the hypersphere in the all positive quadrant"""
     np.random.seed(2130935987)

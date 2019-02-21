@@ -254,7 +254,7 @@ def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=2, displ
     runShowSaveClose(mp.draw2dMeanPlane,saveFigsPrepend+'_meanPlane.png',displayFig=displayFigs)
     runShowSaveClose(ft.partial(plotLogTradeRatios,mp,objHeaders),saveFigsPrepend+'_tradeRatios.png',displayFig=displayFigs)
 
-    fa=ChebySummarizerAnalyzer.fromMeanPlane(mp,freqsToKeep)
+    fa=LegendreSummarizerAnalyzer.fromMeanPlane(mp, freqsToKeep)
     if displayFigs:
         fa.report()
     if saveFigsPrepend is not None:
@@ -422,7 +422,7 @@ class FourierSummarizer():
             with open(tofile,'a') as f:
                 f.writelines(('captured power: '+str(np.sum(np.abs(self.freqSpectra)**2)), 'lost power: '+str(self.lostPower)))
 
-class ChebySummarizerAnalyzer(SlowLegendreAnalyzer):
+class LegendreSummarizerAnalyzer(SlowLegendreAnalyzer):
     # class FourierSummarizerAnalyzer(FourierAnalyzer): # somehow phase is off or somethign in the really easy problems
     def __init__(self,pointHeight,pointLocation,frequenciesToEval=None,freqsToKeep=5):
         super(SlowLegendreAnalyzer, self).__init__(pointHeight, pointLocation, frequenciesToEval)

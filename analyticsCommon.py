@@ -45,11 +45,34 @@ def spectral1dPhasePlot(fourierAnalyzerObj):
     plt.xlabel('frequency')
     plt.ylabel('phase (radians)')
 
+def spectral2dPowerPlot_nonFFT(fourierAnalyzerObj):
+    spectralPower=np.abs(fourierAnalyzerObj.spectrum)**2
+    freqProd=np.meshgrid(*fourierAnalyzerObj.fullOrders, indexing='ij')
+    ax=prep3dAxes()
+    ax.plot_surface(freqProd[0],freqProd[1],spectralPower)
+
+def spectral2dPowerImage_nonFFT(fourierAnalyzerObj):
+    spectralPower=np.abs(fourierAnalyzerObj.spectrum)**2
+    plt.imshow(spectralPower,cmap=globalCmap,interpolation='nearest')
+    plt.colorbar()
+    orders=fourierAnalyzerObj.fullOrders
+    plt.xticks(orders[0], numpyToPrettyStr(orders[0]), rotation=60)
+    plt.yticks(orders[1], numpyToPrettyStr(orders[1]))
+
 def spectral2dPowerPlot(fourierAnalyzerObj):
     spectralPower=np.abs(fourierAnalyzerObj.spectrum)**2
     freqProd=np.meshgrid(*fourierAnalyzerObj.fftFreqs, indexing='ij')
     ax=prep3dAxes()
     ax.plot_surface(freqProd[0],freqProd[1],spectralPower)
+
+def spectral1dPowerPlot_nonFFT(analyzerObj):
+    spectralPower=np.abs(analyzerObj.spectrum)**2
+    plt.plot(analyzerObj.fullOrders,spectralPower,'k.-')
+    # axis_font={'size':'28'}
+    # plt.xlabel('frequency',**axis_font)
+    # plt.ylabel('square power',**axis_font)
+    plt.xlabel('frequency')
+    plt.ylabel('square power')
 
 def spectral2dPowerImage(fourierAnalyzerObj):
     spectralPower=np.abs(fourierAnalyzerObj.spectrum)**2
@@ -62,29 +85,41 @@ def spectral2dPowerImage(fourierAnalyzerObj):
     # plt.xticks(np.arange(len(fourierAnalyzerObj.fftFreqs[0])), fourierAnalyzerObj.fftFreqs[0], rotation=60)
     # plt.yticks(np.arange(len(fourierAnalyzerObj.fftFreqs[1])), fourierAnalyzerObj.fftFreqs[1])
 
+def reconstructInOriginalSpace(meanPlane, analyzer, Z=None):
+    if Z is None:
+        Z=analyzer.pointLocation
+    spectralCurveOutOfPlane=analyzer.reconstruction(Z)
+    meanCurve=meanPlane.pointsInOriginalCoors(Z)
+    spectralCurve=meanCurve+np.dot(spectralCurveOutOfPlane[:,np.newaxis],meanPlane.normalVect[np.newaxis,:])
+    return spectralCurve
+
 def approximationPlot2d(meanPlane, analyzer,objLabels=None):
     dummyTest2d=meanPlane.paretoSamples
     mp=meanPlane
     # plt.plot(mp._centeredSamples[:,0],mp._centeredSamples[:,1])
     plt.plot(dummyTest2d[:,0],dummyTest2d[:,1],'k.',label='Pareto Points')
     plt.plot(mp.inputProjections[:,0],mp.inputProjections[:,1],'kx',label='ProjectedLocations')
+
     spectralCurveInPlane=np.linspace(mp.inputInPlane.min(),mp.inputInPlane.max(),10*mp.inputInPlane.size)
-    planeCurve=np.dot(spectralCurveInPlane[:,np.newaxis],np.squeeze(mp.basisVects)[np.newaxis,:])+mp.meanPoint[np.newaxis,:]
+    planeCurve=meanPlane.pointsInOriginalCoors(spectralCurveInPlane)
+    spectralCurve=reconstructInOriginalSpace(meanPlane, analyzer, spectralCurveInPlane)
+
     plt.plot(planeCurve[:,0],planeCurve[:,1],'k--',label='mean plane')
-
-    filteredCorrection=analyzer.reconstruction()
-    spectralCurveOutOfPlane=analyzer.reconstruction(spectralCurveInPlane)
-    spectralCurve=planeCurve+np.dot(spectralCurveOutOfPlane[:,np.newaxis],mp.normalVect[np.newaxis,:])
     plt.plot(spectralCurve[:,0],spectralCurve[:,1],'k-',label='reconstructed curve')
-
-    # corrected=mp.inputProjections+np.dot(filteredCorrection[:,np.newaxis],mp.normalVect[np.newaxis,:])
-    # plt.plot(corrected[:,0],corrected[:,1],'.',label='spectral representation of inputs')
-
     plt.axis('equal')
     if objLabels is not None:
         plt.xlabel(objLabels[0])
         plt.ylabel(objLabels[1])
     plt.legend(loc='best')
+
+def approximationPlot3d(mp,fa):
+    grid_x,grid_y=np.meshgrid(np.linspace(np.min(mp.inputInPlane[:,0]),np.max(mp.inputInPlane[:,0])), np.linspace(np.min(mp.inputInPlane[:,1]),np.max(mp.inputInPlane[:,1])))
+    points=np.vstack((grid_x.flatten(),grid_y.flatten())).T
+    recons=np.real(fa.reconstruction(locations=points)).reshape(grid_x.shape)
+
+    plt.imshow(recons, cmap=globalCmap,origin='lower',extent=(np.min(mp.inputInPlane[:,0]),np.max(mp.inputInPlane[:,0]), np.min(mp.inputInPlane[:,1]),np.max(mp.inputInPlane[:,1])))
+    plt.plot(mp.inputInPlane[:,0],mp.inputInPlane[:,1],'k.')
+    plt.colorbar()
 
 def stdNumPerSide(dataShape):
     nthRoot=int(np.ceil(dataShape[0]**(1/dataShape[1])))
@@ -113,58 +148,4 @@ def runShowSaveClose(toPlot, saveName=None, displayFig=True):
     plt.show()
     if not displayFig:
         plt.close('all')
-
-def approximationPlot3d(mp,fa):
-    grid_x,grid_y=np.meshgrid(np.linspace(np.min(mp.inputInPlane[:,0]),np.max(mp.inputInPlane[:,0])), np.linspace(np.min(mp.inputInPlane[:,1]),np.max(mp.inputInPlane[:,1])))
-    points=np.vstack((grid_x.flatten(),grid_y.flatten())).T
-    recons=np.real(fa.reconstruction(locations=points)).reshape(grid_x.shape)
-    plt.imshow(recons, cmap=globalCmap,origin='lower',extent=(np.min(mp.inputInPlane[:,0]),np.max(mp.inputInPlane[:,0]), np.min(mp.inputInPlane[:,1]),np.max(mp.inputInPlane[:,1])))
-    plt.plot(mp.inputInPlane[:,0],mp.inputInPlane[:,1],'k.')
-    plt.colorbar()
-
-def spectral1dPowerPlot_nonFFT(analyzerObj):
-    spectralPower=np.abs(analyzerObj.spectrum)**2
-    plt.plot(analyzerObj.fullOrders,spectralPower,'k.-')
-    # axis_font={'size':'28'}
-    # plt.xlabel('frequency',**axis_font)
-    # plt.ylabel('square power',**axis_font)
-    plt.xlabel('frequency')
-    plt.ylabel('square power')
-
-def spectral2dPowerPlot_nonFFT(fourierAnalyzerObj):
-    spectralPower=np.abs(fourierAnalyzerObj.spectrum)**2
-    freqProd=np.meshgrid(fourierAnalyzerObj.fullOrders, indexing='ij')
-    ax=prep3dAxes()
-    ax.plot_surface(freqProd[0],freqProd[1],spectralPower)
-
-def spectral2dPowerImage_nonFFT(fourierAnalyzerObj):
-    spectralPower=np.abs(fourierAnalyzerObj.spectrum)**2
-    plt.imshow(spectralPower,cmap=globalCmap,interpolation='nearest')
-    plt.colorbar()
-    plt.xticks(fourierAnalyzerObj.fullOrders, rotation=60)
-    plt.yticks(fourierAnalyzerObj.fullOrders)
-
-def approximationPlot2d_nonFFT(meanPlane, analyzer,objLabels=None):
-    dummyTest2d=meanPlane.paretoSamples
-    mp=meanPlane
-    # plt.plot(mp._centeredSamples[:,0],mp._centeredSamples[:,1])
-    plt.plot(dummyTest2d[:,0],dummyTest2d[:,1],'k.',label='Pareto Points')
-    plt.plot(mp.inputProjections[:,0],mp.inputProjections[:,1],'kx',label='ProjectedLocations')
-    spectralCurveInPlane=np.linspace(mp.inputInPlane.min(),mp.inputInPlane.max(),10*mp.inputInPlane.size)
-    planeCurve=np.dot(spectralCurveInPlane[:,np.newaxis],np.squeeze(mp.basisVects)[np.newaxis,:])+mp.meanPoint[np.newaxis,:]
-    plt.plot(planeCurve[:,0],planeCurve[:,1],'k--',label='mean plane')
-
-    filteredCorrection=analyzer.reconstruction()
-    spectralCurveOutOfPlane=analyzer.reconstruction(spectralCurveInPlane)
-    spectralCurve=planeCurve+np.dot(spectralCurveOutOfPlane[:,np.newaxis],mp.normalVect[np.newaxis,:])
-    plt.plot(spectralCurve[:,0],spectralCurve[:,1],'k-',label='reconstructed curve')
-
-    # corrected=mp.inputProjections+np.dot(filteredCorrection[:,np.newaxis],mp.normalVect[np.newaxis,:])
-    # plt.plot(corrected[:,0],corrected[:,1],'.',label='spectral representation of inputs')
-
-    plt.axis('equal')
-    if objLabels is not None:
-        plt.xlabel(objLabels[0])
-        plt.ylabel(objLabels[1])
-    plt.legend(loc='best')
 

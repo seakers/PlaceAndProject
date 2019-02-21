@@ -1,0 +1,19 @@
+Legendre
+RBF NN
+Compare Plots
+-> Response at level plot
+-> multiple reconstructions
+Debugging
+-> Why are Legendre and RBF so ill-conditioned?
+
+Write up report
+
+Artificial Datasets
+
+Refactor for simplicity before proceeding
+RBF-autotune params
+Cheybyshev
+
+More sophisticated NN
+Constrained Mean Plane
+Finish Report

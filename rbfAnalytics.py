@@ -2,7 +2,6 @@ import numpy as np
 import pandas as pd
 from scipy.interpolate import rbf
 
-from common import *
 from meanPlane import *
 from tradeoffMatrixImage import *
 from analyticsCommon import *
@@ -25,7 +24,8 @@ class rbfAnalyzer():
         self.inputFilters=[]
         if len(pointLocation.shape)>1:
             dists=sp.spatial.distance.cdist(pointLocation, pointLocation)
-            shortestDists=np.min(dists, axis=0)
+            # shortestDists=np.min(dists, axis=0) # add infinity to diag to get this to work.
+            shortestDists=np.mean(dists)/2
         else:
             shortestDists=np.abs(np.diff(np.sort(pointLocation)))
         self.rbfn=RBFN(numHiddenNodes, sigma=np.mean(shortestDists))
@@ -55,10 +55,10 @@ class rbfAnalyzer():
         return self.filteredSpectrum()
 
     def __forward(self, u, X,Y):
-        return self.rbfn.fit(X,Y)
+        return self.rbfn.weights
 
     def filteredSpectrum(self):
-        return filteredSpectrum(self.inputFilters,self.spectralFilters,self.ordersToEval, self.pointLocation, self.pointHeight, self.__forward)
+        return filteredSpectrum(self.inputFilters,self.spectralFilters,self.centers, self.pointLocation, self.pointHeight, self.__forward)
 
     def trueSpectrum(self):
         return self.rbfn.weights
@@ -116,11 +116,10 @@ class rbfSummarizer():
         toTake=sortIndx[:min(self.numTake,spectralPower.size)]
         notTaken=sortIndx[min(self.numTake,spectralPower.size):]
         self.indcies=toTake
-        if len(centers.shape)>1:
-            ft=orderTuples(centers).T
-            self.centersTaken=ft[toTake,:]
-        else:
+        if len(centers.shape)==1:
             self.centersTaken=centers[toTake]
+        else:
+            self.centersTaken=centers[toTake,:]
         self.freqSpectra=spectrum.flatten()[toTake]
         self.droppedSpectra=spectrum.flatten()[notTaken]
         self.lostPower=np.sum(np.abs(spectralPower.flatten()[notTaken])**2)
@@ -139,19 +138,16 @@ class rbfSummarizer():
     def _toDataFrame(self):
         if not self.hasRun:
             raise InitializeRunFailError
-        if len(self.freqsTaken.shape)>1:
-            toUse=np.squeeze(self.freqsTaken[:,0]>0)
-            ft=self.freqsTaken[toUse,:]
+        if len(self.centersTaken.shape) == 1:
+            toUse=self.centersTaken > 0
+            ft=self.centersTaken[toUse]
         else:
-            toUse=self.freqsTaken>0
-            ft=self.freqsTaken[toUse]
+            toUse=np.squeeze(self.centersTaken[:,0]>0)
+            ft=self.centersTaken[toUse,:]
         fs=self.freqSpectra[toUse]
-        if len(ft.shape)>1:
-            d=dict()
-            for i, ftarr in enumerate(ft.T):
-                d['frequency, dim: '+str(i)]=ftarr
-        else:
-            d={'frequency: ': ft}
+        d=dict()
+        for i, ftarr in enumerate(ft.T):
+            d['center, coordinate: '+str(i)]=ftarr
         d['spectral power']=np.abs(fs)**2
         d['spectral phase']=np.angle(fs, deg=True)
         if self.wavelength is not None:
@@ -165,15 +161,18 @@ class rbfSummarizer():
 
     def powerDeclineReport(self):
         plt.bar(np.arange(len(self.freqSpectra)),np.abs(self.freqSpectra)**2,color=globalBarPlotColor)
-        xtickLbl=list(( 'center: '+c for c,o in zip(multiDimNumpyToPrettyStr(self.centersTaken), numpyToPrettyStr(self.sigmasTaken))))
-        plt.xticks(range(len(self.freqsTaken)),xtickLbl, rotation=75)
+        if len(self.centersTaken.shape) == 1:
+            xtickLbl=list(( 'center: '+c for c,o in zip(numpyToPrettyStr(self.centersTaken), numpyToPrettyStr(self.sigmasTaken))))
+        else:
+            xtickLbl=list(( 'center: '+c for c,o in zip(multiDimNumpyToPrettyStr(self.centersTaken), numpyToPrettyStr(self.sigmasTaken))))
+        plt.xticks(range(len(self.centersTaken)),xtickLbl, rotation=75)
         plt.ylabel('squared power of component')
         plt.xlabel('representative frequency')
 
     def truncatedPowerDeclineReport(self):
         plt.bar(np.arange(len(self.freqSpectra)),np.abs(self.freqSpectra)**2,color=globalBarPlotColor)
         xtickLbl=list(( 'center: '+c for c,o in zip(multiDimNumpyToPrettyStr(self.centersTaken), numpyToPrettyStr(self.sigmasTaken))))
-        plt.xticks(range(len(self.freqsTaken)),xtickLbl, rotation=75)
+        plt.xticks(range(len(self.centersTaken)),xtickLbl, rotation=75)
         plt.ylabel('squared power of component')
         plt.xlabel('representative frequency')
 
@@ -286,7 +285,7 @@ def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None,freqsToKeep=N
         objHeaders=list(map(lambda n: 'obj: '+str(n),range(data.shape[1])))
     mp=lowDimMeanPlane(data) # create the mean plane
 
-    runShowSaveClose(ft.partial(plotLogTradeRatios,mp,objHeaders),saveFigsPrepend+'_tradeRatios.png',displayFig=displayFigs)
+    # runShowSaveClose(ft.partial(plotLogTradeRatios,mp,objHeaders),saveFigsPrepend+'_tradeRatios.png',displayFig=displayFigs)
 
     if freqsToKeep is None:
         freqsToKeep=2**data.shape[1]
@@ -297,7 +296,7 @@ def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None,freqsToKeep=N
         fa.report(saveFigsPrepend+'_report.csv')
 
     runShowSaveClose(fa.powerDeclineReport,saveFigsPrepend+'_powerDeclinePlot.png',displayFig=displayFigs)
-    runShowSaveClose(ft.partial(plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)
+    # runShowSaveClose(ft.partial(plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)
 
 if __name__=="__main__":
     numsmpl=30

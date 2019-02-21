@@ -13,11 +13,6 @@ from common import *
 from analyticsCommon import *
 from tradeoffMatrixImage import *
 
-def incToEven(i):
-    return i+(i%2)
-def decToEven(i):
-    return i-(i%2)
-
 class SlowFourierAnalyzer():
     """
     https://en.wikipedia.org/wiki/Discrete_Fourier_transform#Multidimensional_DFT
@@ -42,6 +37,7 @@ class SlowFourierAnalyzer():
                 # frequenciesToEval=__oneFreqRange(ranges,pointHeight.size)
                 # frequenciesToEval=1/(ranges)*np.arange(1,incToEven(pointHeight.size)/2)
             else:
+                # does this go up to very high dimension properly?
                 frequenciesToEval=np.array(list(map(lambda r, n: 1/r * np.concatenate((np.arange(1,n//2+1),-np.arange(1,incToEven(n)/2+1)[::-1])), ranges, frequencyDivisions)))
                 # frequenciesToEval=np.dot(1/(ranges[:,np.newaxis]),np.concatenate((np.arange(1,pointHeight.size//2),-np.arange(1,incToEven(pointHeight.size)/2)[::-1]))[np.newaxis,:])
                 # frequenciesToEval=np.array(list(map(__oneFreqRange,ranges,it.repeat(pointHeight.size))))
