@@ -93,14 +93,17 @@ def reconstructInOriginalSpace(meanPlane, analyzer, Z=None):
     spectralCurve=meanCurve+np.dot(spectralCurveOutOfPlane[:,np.newaxis],meanPlane.normalVect[np.newaxis,:])
     return spectralCurve
 
-def approximationPlot2d(meanPlane, analyzer,objLabels=None):
+def approximationPlot2d(meanPlane, analyzer,objLabels=None,planeLocations=None):
     dummyTest2d=meanPlane.paretoSamples
     mp=meanPlane
     # plt.plot(mp._centeredSamples[:,0],mp._centeredSamples[:,1])
     plt.plot(dummyTest2d[:,0],dummyTest2d[:,1],'k.',label='Pareto Points')
     plt.plot(mp.inputProjections[:,0],mp.inputProjections[:,1],'kx',label='ProjectedLocations')
 
-    spectralCurveInPlane=np.linspace(mp.inputInPlane.min(),mp.inputInPlane.max(),10*mp.inputInPlane.size)
+    if planeLocations is None:
+        spectralCurveInPlane=np.linspace(mp.inputInPlane.min(),mp.inputInPlane.max(),10*mp.inputInPlane.size)
+    else:
+        spectralCurveInPlane=planeLocations
     planeCurve=meanPlane.pointsInOriginalCoors(spectralCurveInPlane)
     spectralCurve=reconstructInOriginalSpace(meanPlane, analyzer, spectralCurveInPlane)
 
