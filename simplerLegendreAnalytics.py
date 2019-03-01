@@ -6,6 +6,7 @@ import functools as ft
 import matplotlib.pyplot as plt
 import scipy.ndimage.filters as spndf
 import numpy.polynomial.legendre as leg
+import warnings
 
 import common as cmn
 import meanPlane as mP
@@ -19,20 +20,31 @@ from numpy.polynomial import legendre as pl
 class SlowLegendreAnalyzer():
     """
     """
-    def __init__(self,pointHeight,pointLocation,ordersToEval=None):
+    def __init__(self,pointHeight,pointLocation,ordersToEval=None, normalizeMin=None, normalizeRange=None):
         self.pointHeight=pointHeight
         self.pointLocation=pointLocation
+        if normalizeRange is None:
+            self.normalizeRange=np.ptp(pointLocation, keepdims=True)
+        else:
+            self.normalizeRange=normalizeRange
+        if normalizeMin is None:
+            self.normalizeMin=np.min(pointLocation, keepdims=True)
+        else:
+            self.normalizeMin=normalizeMin
+        self.normalizedPointLocation=self.normalize(pointLocation)
         if ordersToEval is None:
             if len(pointLocation.shape)==1:
                 self.ordersToEval=cmn.numpyze(self.pointHeight.size-1)
+                self.ordersToEval=2*np.sqrt(self.ordersToEval) # for stability
             else:
                 nthRoot=cmn.incToEven(np.ceil(pointHeight.size**(1/pointLocation.shape[1])))
+                nthRoot=2*np.sqrt(nthRoot) #for stability see: https://en.wikipedia.org/wiki/Runge%27s_phenomenon#Mitigations_to_the_problem
                 self.ordersToEval=np.array([nthRoot,]*pointLocation.shape[1])
         else:
-            self.ordersToEval=cmn.numpyze(self.ordersToEval)
+            self.ordersToEval=cmn.numpyze(ordersToEval)
         self.ordersToEval=self.ordersToEval.astype(int)
-        if len(self.pointLocation.shape) ==1:
-            self.fullOrders=np.arange(pointHeight.size)
+        if len(self.ordersToEval) ==1:
+            self.fullOrders=np.arange(self.ordersToEval+1)
         else:
             self.fullOrders=np.array(list((np.arange(d+1) for d in self.ordersToEval)))
         self.spectralFilters=[]
@@ -47,6 +59,11 @@ class SlowLegendreAnalyzer():
     def removeInputFilter(self,filter):
         self.inputFilters.remove(filter)
 
+    def normalize(self,x):
+        if np.any(np.logical_or(x<self.normalizeMin, x>(self.normalizeMin+self.normalizeRange))):
+            warnings.warn('outside bounds when normalizing points. input to normalize exceeds bounds of original points to interpolate or manually input range and bounds')
+        return 2*((x-self.normalizeMin)/self.normalizeRange) - 1
+
     @property
     def spectrum(self):
         """
@@ -56,13 +73,13 @@ class SlowLegendreAnalyzer():
         return self.filteredSpectrum()
 
     def filteredSpectrum(self):
-        return aC.filteredSpectrum(self.inputFilters,self.spectralFilters,self.fullOrders, self.pointLocation, self.pointHeight, self.forwardTransform)
+        return aC.filteredSpectrum(self.inputFilters,self.spectralFilters,self.fullOrders, self.normalizedPointLocation, self.pointHeight, self.forwardTransform)
 
     def forwardTransform(self,orders, locations, functionVals): # ugly hack to change orders variable
         return forwardTransform(self.ordersToEval, locations, functionVals)
 
     def trueSpectrum(self):
-        return forwardTransform(self.ordersToEval, self.pointLocation, self.pointHeight)
+        return forwardTransform(self.ordersToEval, self.normalizedPointLocation, self.pointHeight)
 
     def reconstruction(self, locations=None):
         """
@@ -71,12 +88,16 @@ class SlowLegendreAnalyzer():
         :return: value of the inverse transform at corresponding locations. if was done on input, returns heights for each point in the order of the fft input when creating the object
         """
         if locations is None:
-            locations=self.pointLocation
+            locations=self.normalizedPointLocation
+        else:
+            locations=self.normalize(locations)
         return reconstruction(self.ordersToEval, locations, self.filteredSpectrum(),self.pointHeight.size)
 
     def reconstructDerivative(self,locations=None):
         if locations is None:
-            locations=self.pointLocation
+            locations=self.normalizedPointLocation
+        else:
+            locations=self.normalize(locations)
         return reconstructDerivative(self.ordersToEval, locations, self.filteredSpectrum(), self.pointHeight.size)
 
     def avgSqrdReconstructionError(self):
@@ -86,9 +107,9 @@ class SlowLegendreAnalyzer():
         return orderTuples(self.fullOrders)
 
     @classmethod
-    def fromMeanPlane(cls,meanPlane):
+    def fromMeanPlane(cls,meanPlane, ordersToEval=None, normalizeMin=None, normalizeRange=None):
         """returns a FourierAnalyzer which analyzes the residuals as defined by locations in the inputProjections"""
-        return SlowLegendreAnalyzer(meanPlane.inputResidual, meanPlane.inputInPlane)
+        return SlowLegendreAnalyzer(meanPlane.inputResidual, meanPlane.inputInPlane, ordersToEval=ordersToEval, normalizeMin=normalizeMin, normalizeRange=normalizeRange)
 
 def orderTuples(orders):
     freqProd=np.array(orders)
@@ -126,7 +147,6 @@ def genericLegVal(locations, coeffs):
         for i in range(1, locations.shape[1]):
             c=leg.legval(locations[:,i],c, tensor=False)
         return c
-
 
 def legvander4d(locations, deg):
     # stolen straight from legvander3d and mondified
@@ -195,7 +215,7 @@ def reconstructDerivative(freqs, locations, spectrum, numPts):
 class OptionNotSupportedError(Exception):
     pass
 
-def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=10, displayFigs=True, isMaxObj=None):
+def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=5, displayFigs=True, isMaxObj=None, ordersToRun=None):
     """
 
     standard set of plots generated for 2-objective problems
@@ -220,7 +240,10 @@ def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=10, disp
     aC.runShowSaveClose(mp.draw2dMeanPlane,mps,displayFig=displayFigs)
     aC.runShowSaveClose(ft.partial(tMI.plotLogTradeRatios,mp,objHeaders),trs,displayFig=displayFigs)
 
-    fa=LegendreSummarizerAnalyzer.fromMeanPlane(mp,freqsToKeep)
+    if ordersToRun is None:
+        ordersToRun=min(freqsToKeep, 2*np.sqrt(data.shape[0])) # see: https://en.wikipedia.org/wiki/Runge%27s_phenomenon#Mitigations_to_the_problem
+
+    fa=LegendreSummarizerAnalyzer.fromMeanPlane(mp,freqsToKeep,ordersToRun)
     if displayFigs:
         fa.report()
     if saveFigsPrepend is not None:
@@ -232,7 +255,7 @@ def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=10, disp
     # aC.runShowSaveClose(ft.partial(plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)
     return (mp,fa)
 
-def run3danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=3**2,displayFigs=True):
+def run3danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=5**2,displayFigs=True, ordersToRun=None):
     """
     standard set of plots generated for 2-objective problems
     :param data: designs to plot. each row is a design and each column is an objective
@@ -244,7 +267,10 @@ def run3danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=3**2,dis
     aC.runShowSaveClose(mp.draw3dMeanPlane,saveFigsPrepend+'_meanPlane.png',displayFig=displayFigs)
     aC.runShowSaveClose(ft.partial(tMI.plotLogTradeRatios,mp,objHeaders),saveFigsPrepend+'_tradeRatios.png',displayFig=displayFigs)
 
-    fa=LegendreSummarizerAnalyzer.fromMeanPlane(mp,freqsToKeep)
+    if ordersToRun is None:
+        ordersToRun=min(freqsToKeep, 2*np.sqrt(np.sqrt(data.shape[0]))) # see: https://en.wikipedia.org/wiki/Runge%27s_phenomenon#Mitigations_to_the_problem
+    fa=LegendreSummarizerAnalyzer.fromMeanPlane(mp,freqsToKeep, [ordersToRun,]*2)
+
     if displayFigs:
         fa.report()
     if saveFigsPrepend is not None:
@@ -256,7 +282,7 @@ def run3danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=3**2,dis
     aC.runShowSaveClose(fa.powerDeclineReport,saveFigsPrepend+'_powerDeclineReport.png',displayFig=displayFigs)
     # aC.runShowSaveClose(ft.partial(plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)
 
-def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None,freqsToKeep=None,displayFigs=True):
+def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None,freqsToKeep=None,displayFigs=True, ordersToRun=None):
     """
     standard set of plots generated for 2-objective problems
     :param data: designs to plot. each row is a design and each column is an objective
@@ -270,7 +296,10 @@ def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None,freqsToKeep=N
 
     if freqsToKeep is None:
         freqsToKeep=2**data.shape[1]
-    fa=LegendreSummarizerAnalyzer.fromMeanPlane(mp,freqsToKeep)
+    dim=data.shape[1]-1
+    if ordersToRun is None:
+        ordersToRun=min(freqsToKeep, 2*(data.shape[0])**(1/(2*dim)))
+    fa=LegendreSummarizerAnalyzer.fromMeanPlane(mp,freqsToKeep,[ordersToRun,]*dim)
     if displayFigs:
         fa.report()
     if saveFigsPrepend is not None:
@@ -366,8 +395,11 @@ class PolynomialSummarizer():
                 f.writelines(('captured power: '+str(np.sum(np.abs(self.freqSpectra)**2)), 'lost power: '+str(self.lostPower)))
 
 class LegendreSummarizerAnalyzer(SlowLegendreAnalyzer):
-    def __init__(self,pointHeight,pointLocation,frequenciesToEval=None,freqsToKeep=5):
-        super(LegendreSummarizerAnalyzer, self).__init__(pointHeight, pointLocation, frequenciesToEval)
+    """
+    mixin summarizer and analyzer. Recommended way to build and run.
+    """
+    def __init__(self,pointHeight,pointLocation,freqsToKeep=5,ordersToEval=None,):
+        super(LegendreSummarizerAnalyzer, self).__init__(pointHeight, pointLocation, ordersToEval)
         self.summarizer=PolynomialSummarizer(freqsToKeep,wavelenth=np.ptp(self.pointLocation,axis=0))
         self.addSpectralFilter(self.summarizer)
 
@@ -386,29 +418,43 @@ class LegendreSummarizerAnalyzer(SlowLegendreAnalyzer):
             self.summarizer.powerDeclineReport()
 
     @classmethod
-    def fromMeanPlane(cls,meanPlane,freqsToKeep=5):
+    def fromMeanPlane(cls,meanPlane,freqsToKeep=5,ordersToEval=None):
         """returns a FourierAnalyzer which analyzes the residuals as defined by locations in the inputProjections"""
-        return LegendreSummarizerAnalyzer(meanPlane.inputResidual, meanPlane.inputInPlane, freqsToKeep=freqsToKeep)
+        return LegendreSummarizerAnalyzer(meanPlane.inputResidual, meanPlane.inputInPlane, ordersToEval=ordersToEval, freqsToKeep=freqsToKeep)
 
 if __name__=="__main__":
     numsmpl=30
 
     # demo finding the mean plane in 2d
-    seedList=np.linspace(0,np.pi/2,numsmpl)
+    # seedList=np.linspace(0,np.pi/2,numsmpl)
     seedList=np.sort(np.random.rand(numsmpl)*np.pi/2)
     dummyTest2d=np.vstack((np.sin(seedList),np.cos(seedList))).T
 
-    run2danalysis(dummyTest2d,saveFigsPrepend='testSave')
-    run2danalysis(dummyTest2d)
+    # run2danalysis(dummyTest2d,saveFigsPrepend='testSave')
+    # run2danalysis(dummyTest2d)
 
-    seedList=np.linspace(0,1,64)
-    y=np.sin(2*np.pi*seedList)
-    fa=SlowLegendreAnalyzer(y, seedList)
-    derivatives=np.array([fa.reconstructDerivative(x) for x in seedList])
+    # seedList=np.concatenate((np.linspace(0,0.15,16), np.linspace(0.3, 0.6, 32), np.linspace(0.85, 1, 16)))
+    seedList=np.random.sample(64)
+    # seedList=np.linspace(0,1,16)
+    # seedList=2*seedList-1
+
+    # testList=np.linspace(-1,1,128)
+    testList=np.linspace(0,1,128)
+
+    # y=np.sin(2*np.pi*seedList)
+    y=np.sin(2*np.pi*seedList)+ 0.1*np.random.sample(len(seedList))
+    fa=SlowLegendreAnalyzer(y, seedList, ordersToEval=2*np.sqrt(len(seedList)), normalizeMin=0, normalizeRange=1)
+    # fa=SlowLegendreAnalyzer(y, seedList, ordersToEval=np.sqrt(len(seedList)))
+    # fa=SlowLegendreAnalyzer(y, seedList)
+    derivatives=np.array([fa.reconstructDerivative(x) for x in testList])
+
+
     plt.figure()
-    plt.plot(seedList,y,seedList,fa.reconstruction(seedList))
-    plt.figure()
-    plt.plot(seedList,2*np.pi*np.cos(2*np.pi*seedList),seedList,derivatives)
+    plt.plot(testList,np.sin(2*np.pi*testList),'ro',testList,fa.reconstruction(testList),'b-',seedList,np.sin(2*np.pi*seedList),'ko')
+    # plt.figure()
+    # plt.plot(testList,2*np.pi*np.cos(2*np.pi*testList),'ro',testList,derivatives,'b-')
+    plt.show()
+    aC.spectral1dPowerPlot_nonFFT(fa)
     plt.show()
 
     #draw basis functions

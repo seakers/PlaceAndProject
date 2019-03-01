@@ -105,7 +105,7 @@ def runComparisons(probName,metricsFile,preferenceFile, filePrepend="./output/")
     appendDict=['','neg. ']
     correctedHeaders=[appendDict[int(isM)]+s for isM,s in zip(isMax,correctedHeaders)]
 
-    normalizedData=(sameDirVals-sameDirVals.min(axis=0)[np.newaxis,:])/np.ptp(sameDirVals,axis=0)[np.newaxis,:]
+    normalizedData=(sameDirVals-sameDirVals.min(axis=0)[np.newaxis,:])/np.ptp(sameDirVals,axis=0)[np.newaxis,:] # set to positive orthant [0,1]**d
     correctedHeaders=['FoR '+s for s in correctedHeaders] # "FoR" stands for "Fraction of Range" and corresponds to the normalization of the dataset by min-max.
 
     meanCoop=covarCompete(normalizedData)
@@ -124,7 +124,6 @@ if __name__=="__main__":
     # metricsFiles=['EOSSdownSel_met.csv','GNC_scenario_9_met.csv']
     # metricsFiles=['EOSSdownSel_met.csv',]
     # metricsFiles=['GNC_scenario_1_met.csv',]
-    # metricsFiles=metricsFiles[8:]
     for metricsFile in metricsFiles:
         pathedMetricFile=os.path.join('./cityplotData',metricsFile)
         if os.path.isfile(pathedMetricFile):
