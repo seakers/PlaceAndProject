@@ -17,11 +17,13 @@ from numpy.polynomial import legendre as pl
 
 #nice reference: http://mathfaculty.fullerton.edu/mathews/n2003/LegendrePolyMod.html
 
-class SlowLegendreAnalyzer():
+
+class PolynomialAnalyzer():
     """
     """
-    def __init__(self,pointHeight,pointLocation,ordersToEval=None, normalizeMin=None, normalizeRange=None):
+    def __init__(self,forwardTransform, reconstruct, reconstructDerivative, pointHeight,pointLocation,ordersToEval=None, normalizeMin=None, normalizeRange=None):
         self.pointHeight=pointHeight
+        self.forwardTransform=forwardTransform
         self.pointLocation=pointLocation
         if normalizeRange is None:
             self.normalizeRange=np.ptp(pointLocation, keepdims=True)
@@ -32,13 +34,15 @@ class SlowLegendreAnalyzer():
         else:
             self.normalizeMin=normalizeMin
         self.normalizedPointLocation=self.normalize(pointLocation)
+        self.reconCall=reconstruct
+        self.reconDcall=reconstructDerivative
         if ordersToEval is None:
             if len(pointLocation.shape)==1:
                 self.ordersToEval=cmn.numpyze(self.pointHeight.size-1)
-                self.ordersToEval=2*np.sqrt(self.ordersToEval) # for stability
+                self.ordersToEval=2*np.sqrt(self.ordersToEval) #for stability see: https://en.wikipedia.org/wiki/Runge%27s_phenomenon#Mitigations_to_the_problem
             else:
-                nthRoot=cmn.incToEven(np.ceil(pointHeight.size**(1/pointLocation.shape[1])))
-                nthRoot=2*np.sqrt(nthRoot) #for stability see: https://en.wikipedia.org/wiki/Runge%27s_phenomenon#Mitigations_to_the_problem
+                totalCapacity=2*np.sqrt(cmn.numpyze(self.pointHeight.size-1))
+                nthRoot=np.floor(totalCapacity**(1/(2*pointLocation.shape[1])))
                 self.ordersToEval=np.array([nthRoot,]*pointLocation.shape[1])
         else:
             self.ordersToEval=cmn.numpyze(ordersToEval)
@@ -73,13 +77,12 @@ class SlowLegendreAnalyzer():
         return self.filteredSpectrum()
 
     def filteredSpectrum(self):
-        return aC.filteredSpectrum(self.inputFilters,self.spectralFilters,self.fullOrders, self.normalizedPointLocation, self.pointHeight, self.forwardTransform)
-
-    def forwardTransform(self,orders, locations, functionVals): # ugly hack to change orders variable
-        return forwardTransform(self.ordersToEval, locations, functionVals)
+        def decForward(orders, locations, functionVals):
+            return self.forwardTransform(self.ordersToEval, locations, functionVals) # ugly hack to convert full orders to to eval orders at last second
+        return aC.filteredSpectrum(self.inputFilters,self.spectralFilters,self.fullOrders, self.normalizedPointLocation, self.pointHeight, decForward)
 
     def trueSpectrum(self):
-        return forwardTransform(self.ordersToEval, self.normalizedPointLocation, self.pointHeight)
+        return self.forwardTransform(self.ordersToEval, self.normalizedPointLocation, self.pointHeight)
 
     def reconstruction(self, locations=None):
         """
@@ -91,14 +94,14 @@ class SlowLegendreAnalyzer():
             locations=self.normalizedPointLocation
         else:
             locations=self.normalize(locations)
-        return reconstruction(self.ordersToEval, locations, self.filteredSpectrum(),self.pointHeight.size)
+        return self.reconCall(self.ordersToEval, locations, self.filteredSpectrum(),self.pointHeight.size)
 
     def reconstructDerivative(self,locations=None):
         if locations is None:
             locations=self.normalizedPointLocation
         else:
             locations=self.normalize(locations)
-        return reconstructDerivative(self.ordersToEval, locations, self.filteredSpectrum(), self.pointHeight.size)
+        return self.reconDcall(self.ordersToEval, locations, self.filteredSpectrum(), self.pointHeight.size)
 
     def avgSqrdReconstructionError(self):
         return np.mean((self.reconstruction()-self.pointHeight)**2)
@@ -172,7 +175,7 @@ def legvander5d(locations, deg):
     v = vi[0][..., None, None, None, None]*vi[1][..., None,:,None, None, None]*vi[2][..., None, None,:,None,None]*vi[3][...,None,None,None,:,None]*vi[4][...,None,None,None,None,:]
     return v.reshape(v.shape[:-n] + (-1,))
 
-def forwardTransform(orders, locations, functionVals):
+def legForwardTransform(orders, locations, functionVals):
     if len(locations.shape)==1:
         return np.array(leg.legfit(locations, functionVals, orders[0]))
     else:
@@ -185,11 +188,11 @@ def forwardTransform(orders, locations, functionVals):
         elif locations.shape[1]==5:
             V=legvander5d(locations,orders)
         else:
-            raise NotImplementedError
+            raise NotImplementedError # there's a bad startup joke about this being good enough for the paper.
         ret, _, _, _=npl.lstsq(V, functionVals, rcond=None)
-        return np.reshape(ret, np.array(orders)+1)
+        return np.reshape(ret, (np.array(orders)+1).flatten())
 
-def reconstruction(orders, locations, coeffs,unusedNumPts):
+def legReconstruct(orders, locations, coeffs,unusedNumPts):
     if len(locations.shape)==1:
         return np.array(leg.legval(locations, coeffs))
     else:
@@ -200,7 +203,7 @@ def reconstruction(orders, locations, coeffs,unusedNumPts):
         else:
             return genericLegVal(locations, coeffs)
 
-def reconstructDerivative(freqs, locations, spectrum, numPts):
+def legReconstructDerivative(freqs, locations, spectrum, numPts):
     """
 
     :param freqs:
@@ -211,6 +214,57 @@ def reconstructDerivative(freqs, locations, spectrum, numPts):
     """
     deriv=leg.legder(spectrum, axis=0)
     return leg.legval(locations, deriv)
+
+class SlowLegendreAnalyzer(PolynomialAnalyzer):
+    def __init__(self,pointHeight,pointLocation,ordersToEval=None, normalizeMin=None, normalizeRange=None):
+        super().__init__(legForwardTransform, legReconstruct, legReconstructDerivative, pointHeight,pointLocation,ordersToEval, normalizeMin, normalizeRange)
+
+def culledLegForwardTransform(orders, locations, functionVals, threshold=None):
+    # inspired by : A Simple Regularization of the Polynomial Interpolation For the Runge Phenomemenon
+    if len(locations.shape)==1:
+        vandermonde=leg.legvander(locations, orders[0])
+    elif locations.shape[1]==2:
+        vandermonde=leg.legvander2d(locations[:,0], locations[:,1], orders)
+    elif locations.shape[1]==3:
+        vandermonde=leg.legvander3d(locations[:,0],locations[:,1],locations[:,2], orders)
+    elif locations.shape[1]==4:
+        vandermonde=legvander4d(locations,orders)
+    elif locations.shape[1]==5:
+        vandermonde=legvander5d(locations,orders)
+    else:
+        raise NotImplementedError # there's a bad startup joke about this being good enough for the paper.
+
+    # preconditioner = np.diag((0.94) ** (2* (np.arange(vandermonde.shape[0]))))
+    # vandermonde=np.dot(preconditioner, vandermonde)
+
+    U,S,Vh=np.linalg.svd(vandermonde)
+    numTake=0
+    filtS=S
+    if threshold is None:
+        Eps= np.finfo(functionVals.dtype).eps
+        Neps = np.prod(cmn.numpyze(orders)) * Eps * S[0] #truncation due to ill-conditioning
+        Nt = max(np.argmax(Vh, axis=0)) #"Automatic" determination of threshold due to Runge's phenomenon
+        threshold=min(Neps, Nt)
+    while numTake<=0:
+        filter=S>threshold
+        numTake=filter.sum()
+        if numTake>0:
+            filtU=U[:,:numTake]; filtS=S[:numTake]; filtVh=Vh[:numTake, :]
+        else:
+            if threshold>1e-13:
+                threshold=threshold/2
+                warnings.warn('cutting threshold for eigenvalues to '+str(threshold))
+            else:
+                warnings('seems all eigenvalues are zero (<1e-13), setting to zero and breaking')
+                filtS=np.zeros_like(S)
+    truncVander=np.dot(filtU,np.dot(np.diag(filtS),filtVh))
+
+    ret, _, _, _=npl.lstsq(truncVander, functionVals, rcond=None)
+    return np.reshape(ret, np.array(orders).flatten()+1)
+
+class CulledLegenderAnalyzer(PolynomialAnalyzer):
+    def __init__(self,pointHeight,pointLocation,ordersToEval=None, normalizeMin=None, normalizeRange=None):
+        super().__init__(culledLegForwardTransform, legReconstruct, legReconstructDerivative, pointHeight,pointLocation,ordersToEval=None, normalizeMin=None, normalizeRange=None)
 
 class OptionNotSupportedError(Exception):
     pass
@@ -394,12 +448,12 @@ class PolynomialSummarizer():
             with open(tofile,'a') as f:
                 f.writelines(('captured power: '+str(np.sum(np.abs(self.freqSpectra)**2)), 'lost power: '+str(self.lostPower)))
 
-class LegendreSummarizerAnalyzer(SlowLegendreAnalyzer):
+class LegendreSummarizerAnalyzer(CulledLegenderAnalyzer):
     """
     mixin summarizer and analyzer. Recommended way to build and run.
     """
-    def __init__(self,pointHeight,pointLocation,freqsToKeep=5,ordersToEval=None,):
-        super(LegendreSummarizerAnalyzer, self).__init__(pointHeight, pointLocation, ordersToEval)
+    def __init__(self,pointHeight,pointLocation,ordersToEval=None,freqsToKeep=5):
+        super().__init__(pointHeight, pointLocation, ordersToEval=ordersToEval)
         self.summarizer=PolynomialSummarizer(freqsToKeep,wavelenth=np.ptp(self.pointLocation,axis=0))
         self.addSpectralFilter(self.summarizer)
 
