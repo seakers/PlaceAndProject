@@ -57,7 +57,7 @@ class RBFN(object):
     #     return G
 
     def _select_centers(self, X):
-        random_args = np.sort(np.random.choice(X.shape[0], self.hidden_shape, replace=False)) #really bad idea to be honest
+        random_args = np.sort(np.random.choice(X.shape[0], int(self.hidden_shape), replace=False)) #really bad idea to be honest
         centers = X[random_args]
         return centers
 
@@ -100,7 +100,7 @@ class RBFN(object):
             tX=tX.reshape((1,len(tX)))
         for i in range(d.shape[0]):
             for j in range(d.shape[1]):
-                d[i,j]=(tX[j,:]-self.centers[i,:])/self.sigma
+                d[i,j]=(tX[j,:]-self.centers[i,:])/self.sigma**2
         return 2*np.dot(Gw, d)
 
     def hessian(self,X):

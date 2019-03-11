@@ -1,13 +1,16 @@
 from RBFN.RBFN import RBFN
 import sklearn.cluster as sklc
+import numpy as np
 
 
 class kmeansRBFN(RBFN):
-    def __init__(self, hidden_shape, numCenters, sigma=1.0):
+    def __init__(self, hidden_shape, sigma=1.0):
         super().__init__(hidden_shape, sigma=sigma)
-        self.numCenters=numCenters
 
     def _select_centers(self, X):
-        km=sklc.kmeans(n_clusters=self.numCenters)
-        km.fit(X)
-        return km.cluster_centers_
+        if len(X.shape)>1:
+            km=sklc.KMeans(n_clusters=self.hidden_shape)
+            km.fit(X)
+            return km.cluster_centers_
+        else:
+            return np.linspace(X.min(), X.max(), self.hidden_shape)

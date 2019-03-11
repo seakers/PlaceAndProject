@@ -2,6 +2,8 @@ from tradeoffMatrixImage import *
 from analyticsCommon import *
 
 from RBFN.RBFN import RBFN
+from RBFN.recalcRBFN import RBFNwithParamTune
+from RBFN.kmeansRBFN import kmeansRBFN
 
 class rbfAnalyzer():
     def __init__(self,pointHeight,pointLocation,numHiddenNodes=None):
@@ -23,8 +25,13 @@ class rbfAnalyzer():
             shortestDists=np.mean(dists)/2
         else:
             shortestDists=np.abs(np.diff(np.sort(pointLocation)))
-        self.rbfn=RBFN(numHiddenNodes, sigma=np.mean(shortestDists))
+        # self.rbfn=RBFN(numHiddenNodes, sigma=np.mean(shortestDists))
+        # self.rbfn=RBFN(numHiddenNodes/5, sigma=np.mean(shortestDists))
+        # self.rbfn.fit(pointLocation, pointHeight)
+        self.rbfn=kmeansRBFN(int(numHiddenNodes/5), sigma=np.mean(shortestDists))
         self.rbfn.fit(pointLocation, pointHeight)
+        # self.rbfn=RBFNwithParamTune()
+        # self.rbfn.fit(pointLocation, pointHeight, kfolds=5)
         self.centers=self.rbfn.centers
         # self.sigmas=self.rbfn.sigmas
 

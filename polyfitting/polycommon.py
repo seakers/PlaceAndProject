@@ -6,7 +6,6 @@ from matplotlib import pyplot as plt
 
 import analyticsCommon as aC
 import common as cmn
-from polyfitting.legender import SlowLegendreAnalyzer
 
 
 class PolynomialAnalyzer():
@@ -103,7 +102,7 @@ class PolynomialAnalyzer():
     @classmethod
     def fromMeanPlane(cls,meanPlane, ordersToEval=None, normalizeMin=None, normalizeRange=None):
         """returns a FourierAnalyzer which analyzes the residuals as defined by locations in the inputProjections"""
-        return SlowLegendreAnalyzer(meanPlane.inputResidual, meanPlane.inputInPlane, ordersToEval=ordersToEval, normalizeMin=normalizeMin, normalizeRange=normalizeRange)
+        return cls(meanPlane.inputResidual, meanPlane.inputInPlane, ordersToEval=ordersToEval, normalizeMin=normalizeMin, normalizeRange=normalizeRange) #dangerous. Assumes input arguments don't chagne in children classes
 
 
 def orderTuples(orders):
