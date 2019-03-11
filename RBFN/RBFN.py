@@ -9,20 +9,14 @@ Description: Minimal implementation of a radial basis function network
 but it's rather poor and rudimentary, so made lots of mods
 """
 
-import numpy as np
 import scipy as sp
-import numpy.linalg as npl
 from common import *
 
 class RBFN(object):
     def __init__(self, hidden_shape, sigma=1.0):
         """ radial basis function network
         # Arguments
-            input_shape: dimension of the input data
-            e.g. scalar functions have should have input_dimension = 1
-            hidden_shape: the number
-            hidden_shape: number of hidden radial basis functions,
-            also, number of centers.
+            hidden_shape: number of hidden radial basis functions. Also, number of centers.
         """
         self.hidden_shape = hidden_shape
         self.sigma = sigma
@@ -30,10 +24,11 @@ class RBFN(object):
         self.weights = None
 
     def _vectorized_exponential(self, radial):
-        return np.exp(-radial/self.sigma)
+        return np.exp(-radial**2/self.sigma**2)
 
-    def _kernel_function(self, center, data_point):
-        return np.exp(-np.linalg.norm(center-data_point)**2/self.sigma)
+    # OBSOLETE: use vectorized exponential instead
+    # def _kernel_function(self, center, data_point):
+    #     return np.exp(-np.linalg.norm(center-data_point)**2/self.sigma)
 
     def _vectorized_interoplation_matrix(self,X):
         if len(X.shape)==1:
@@ -44,21 +39,22 @@ class RBFN(object):
             cents=self.centers
         return self._vectorized_exponential(sp.spatial.distance.cdist(locs, cents))
 
-    def _calculate_interpolation_matrix(self, X):
-        """ Calculates interpolation matrix using a kernel_function
-        # Arguments
-            X: Training data
-        # Input shape
-            (num_data_samples, input_shape)
-        # Returns
-            G: Interpolation matrix
-        """
-        G = np.zeros((X.shape[0], self.hidden_shape))
-        for data_point_arg, data_point in enumerate(X):
-            for center_arg, center in enumerate(self.centers):
-                G[data_point_arg, center_arg] = self._kernel_function(
-                        center, data_point)
-        return G
+    # def _calculate_interpolation_matrix(self, X):
+    #     """ Calculates interpolation matrix using a kernel_function
+    #     # Arguments
+    #         X: Training data
+    #     # Input shape
+    #         (num_data_samples, input_shape)
+    #     # Returns
+    #         G: Interpolation matrix
+    #     OBSOLETE. Taken from original author. But this code sucks. use _vectorized_interpolation_matrix instead
+    #     """
+    #     G = np.zeros((X.shape[0], self.hidden_shape))
+    #     for data_point_arg, data_point in enumerate(X):
+    #         for center_arg, center in enumerate(self.centers):
+    #             G[data_point_arg, center_arg] = self._kernel_function(
+    #                     center, data_point)
+    #     return G
 
     def _select_centers(self, X):
         random_args = np.sort(np.random.choice(X.shape[0], self.hidden_shape, replace=False)) #really bad idea to be honest
@@ -114,21 +110,6 @@ class RBFN(object):
         :return: gradient vector in components of X
         """
         raise NotImplementedError
-
-class RBFNwithParamTune(RBFN):
-    def __init__(self):
-        """ radial basis function network
-        # Arguments
-            input_shape: dimension of the input data
-            e.g. scalar functions have should have input_dimension = 1
-            hidden_shape: the number
-            hidden_shape: number of hidden radial basis functions,
-            also, number of centers.
-        """
-        super(RBFN, self).__init__(0, sigma=1.0)
-
-    def fit(self, X, Y):
-        super(RBFN, self).fit(X,Y)
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
