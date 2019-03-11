@@ -1,5 +1,5 @@
 import fourierAnalytics as fA
-import rbfAnalytics as rA
+from RBFN import rbfAnalytics as rA
 from polyfitting import legender as lA
 import itertools as it
 import numpy as np
