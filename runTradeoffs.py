@@ -1,13 +1,10 @@
-from common import *
 import fourierAnalytics as fA
 import rbfAnalytics as rA
-import simplerLegendreAnalytics as lA
+from polyfitting import legender as lA
 import itertools as it
 import numpy as np
 import pandas as pd
 import os
-import functools as ft
-import operator as op
 import warnings as w
 
 import meanPlane as mp

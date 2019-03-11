@@ -1,11 +1,5 @@
-import numpy as np
-import matplotlib.pyplot as plt
-import functools as ft
 import scipy as sp
 
-import fourierAnalytics as fA
-import simplerLegendreAnalytics as lA
-import meanPlane as mP
 from common import *
 
 def filteredSpectrum(inputFilters, spectralFilters,frequencies,locations,heights,forwardTransform):
