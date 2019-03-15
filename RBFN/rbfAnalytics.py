@@ -28,10 +28,10 @@ class rbfAnalyzer():
         # self.rbfn=RBFN(numHiddenNodes, sigma=np.mean(shortestDists))
         # self.rbfn=RBFN(numHiddenNodes/5, sigma=np.mean(shortestDists))
         # self.rbfn.fit(pointLocation, pointHeight)
-        self.rbfn=kmeansRBFN(int(numHiddenNodes/5), sigma=np.mean(shortestDists))
-        self.rbfn.fit(pointLocation, pointHeight)
-        # self.rbfn=RBFNwithParamTune()
-        # self.rbfn.fit(pointLocation, pointHeight, kfolds=5)
+        # self.rbfn=kmeansRBFN(int(numHiddenNodes/5), sigma=np.mean(shortestDists))
+        # self.rbfn.fit(pointLocation, pointHeight)
+        self.rbfn=RBFNwithParamTune()
+        self.rbfn.fit(pointLocation, pointHeight, kfolds=3, numNEvals=3)
         self.centers=self.rbfn.centers
         # self.sigmas=self.rbfn.sigmas
 
@@ -100,12 +100,11 @@ def orderTuples(orders):
     return freqProd
 
 class rbfSummarizer():
-    def __init__(self,numToTake,wavelenth=None):
+    def __init__(self,numToTake):
         self.numTake=numToTake
         self.freqSpectra=[]
         self.droppedSpectra=[]
         self.indcies=[]
-        self.wavelength=wavelenth
         self.hasRun=False
         self.lostPower=None
         self.centersTaken=[]
@@ -144,21 +143,13 @@ class rbfSummarizer():
             toUse=self.centersTaken > 0
             ft=self.centersTaken[toUse]
         else:
-            toUse=np.squeeze(self.centersTaken[:,0]>0)
+            toUse=np.logical_not(np.all(self.centersTaken == 0, axis=1))
             ft=self.centersTaken[toUse,:]
         fs=self.freqSpectra[toUse]
         d=dict()
         for i, ftarr in enumerate(ft.T):
             d['center, coordinate: '+str(i)]=ftarr
         d['spectral power']=np.abs(fs)**2
-        d['spectral phase']=np.angle(fs, deg=True)
-        if self.wavelength is not None:
-            if not hasattr(self.wavelength,'len') or len(self.wavelength)==1:
-                numHump=ft*self.wavelength
-            else:
-                numHump=ft*self.wavelength[np.newaxis,:]
-            for i, humpArr in enumerate(numHump.T):
-                d['number of humps dim '+str(i)]=humpArr
         return pd.DataFrame(d)
 
     def powerDeclineReport(self):
@@ -191,7 +182,7 @@ class rbfSummarizer():
 class rbfSummarizerAnalyzer(rbfAnalyzer):
     def __init__(self,pointHeight,pointLocation,frequenciesToEval=None,freqsToKeep=5):
         super(rbfSummarizerAnalyzer, self).__init__(pointHeight, pointLocation, frequenciesToEval)
-        self.summarizer=rbfSummarizer(freqsToKeep, wavelenth=np.ptp(self.pointLocation, axis=0))
+        self.summarizer=rbfSummarizer(freqsToKeep)
         self.addSpectralFilter(self.summarizer)
 
     def report(self, tofile=None):

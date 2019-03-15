@@ -33,7 +33,10 @@ class RBFN(object):
     def _vectorized_interoplation_matrix(self,X):
         if len(X.shape)==1:
             locs=X[:,np.newaxis]
-            cents=self.centers[:,np.newaxis]
+            if len(self.centers.shape)==1:
+                cents=self.centers[:,np.newaxis]
+            else:
+                cents=self.centers
         else:
             locs=X
             cents=self.centers
