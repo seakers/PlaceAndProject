@@ -8,20 +8,16 @@ import sklearn.model_selection as sklcv
 
 class RBFNwithParamTune(kmeansRBFN):
     """ radial basis function network with auto-tuning parameters"""
-    def __init__(self, penaltyTerm=None):
-        super().__init__(1, sigma=1)
+    def __init__(self, constantTerm=False):
+        super().__init__(1, sigma=1, constantTerm=constantTerm)
 
-    def fit(self,X,Y, penalty=None, numNEvals=None, kfolds=None, testSize=None):
+    def fit(self,X,Y, penalty=None, kfolds=None, testSize=None):
         self.centers=super()._select_centers(X)
         super().fit(X,Y)
         if kfolds is not None:
-            if numNEvals is None:
-                numNEvals=np.inf
-            self.optimizeAcrossPenalty(X, Y, numNEvals=numNEvals, kfolds=kfolds, testSize=testSize)
-        elif numNEvals is not None or penalty is not None:
-            if numNEvals is None:
-                numNEvals=np.inf
-            self.optimizeRBFNwithVariableLayers(self, X, Y, numEvals=numNEvals, penalty=penalty)
+            self.optimizeAcrossPenalty(X, Y, kfolds=kfolds, testSize=testSize)
+        elif penalty is not None:
+            self.optimizeRBFNwithVariableLayers(self, X, Y, penalty=penalty)
         else:
             self.optimizeRBFN(self, X,Y)
         # assert optimizer already set own variables
@@ -38,13 +34,13 @@ class RBFNwithParamTune(kmeansRBFN):
         nm=np.prod(dataShape)
         curBrk=0
         endBrk=n+curBrk
-        alphas=optVars[curBrk:endBrk]
+        sigmas=optVars[curBrk:endBrk]
         curBrk=endBrk
         endBrk+=nm
         centers=np.reshape(optVars[curBrk:endBrk],dataShape)
         curBrk=endBrk
         endBrk+=n
-        sigmas=optVars[curBrk:endBrk]
+        alphas=optVars[curBrk:]
 
         toOperateOn.sigma=sigmas
         toOperateOn.centers=centers
@@ -79,7 +75,7 @@ class RBFNwithParamTune(kmeansRBFN):
         y0=minimizationFunction(x0)
 
         centLBnd=-np.full(n, np.inf); centUBnd=np.full(n, np.inf)
-        alphLBnd=-np.full(n*m, np.inf); alphUBnd=np.full(n*m, np.inf)
+        alphLBnd=-np.full(n*m+toOperateOn.activeConstant, np.inf); alphUBnd=np.full(n*m+toOperateOn.activeConstant, np.inf)
         sigLBnd=1e-8* np.ones(n); sigUBnd=1e10 * np.ones(n)
         bnds=spo.Bounds(np.concatenate((alphLBnd, centLBnd, sigLBnd)), np.concatenate((alphUBnd, centUBnd, sigUBnd)), keep_feasible=True)
 
@@ -88,46 +84,40 @@ class RBFNwithParamTune(kmeansRBFN):
         toOperateOn.breakAndSetFromOptVect(optRes.x, (n, m))
         return optRes
 
-    def optimizeRBFNwithVariableLayers(toOperateOn, X, Y, numEvals=np.inf, penalty=0, returnN=False):
+    def optimizeRBFNwithVariableLayers(toOperateOn, X, Y, penalty=0, zeroThreshold=1e-10, returnN=False):
         """
-        optimizes weights, sigmas and centers of an RBFN network but also finds best value of the number of hidden layers
+        optimizes weights, sigmas and centers of an RBFN network but also finds best value of the number of hidden layers and sets the RBFN to that form
         :param toOperateOn: RBFN object to optimize parameters of
         :param X: training set X axis 0 is elements, axis 1 is data dimensions
         :param Y: training set Y unidimensional and real
         :param penalty: L1 penalty term for having high N
         :return: sets toOperateOn to the best found values (as determined by the L1 penalized weights added to the L2 loss. returns the optimization object from sciply.optimize
         """
-        if penalty == 0:
-            return toOperateOn.optimizeRBFN(X,Y,penalty=penalty) # obviously, will optimize for higher N. This is training data after all
-        n=toOperateOn.hidden_shape
-        if len(X.shape)==1:
-            m=1
+        optRes=toOperateOn.optimizeRBFN(X,Y,penalty=penalty) # obviously, will optimize for higher N. This is training data after all
+        # assume toOperateOn set by optimization
+        toUse=np.abs(toOperateOn.weights) > zeroThreshold
+        if toOperateOn.activeConstant:
+            toUse[0]=True
+            toOperateOn.weights=toOperateOn.weights[toUse]
+            toUse=toUse[1:]
         else:
-            m=X.shape[1]
-        nLBnd=1; nUBnd=len(Y)
-        def evalForN(thisN):
-            toOperateOn.hidden_shape=thisN
-            optRes=toOperateOn.optimizeRBFN(X,Y, penalty=penalty)
+            toOperateOn.weights=toOperateOn.weights[toUse]
+        numUse=np.sum(toUse)
+        if numUse == 0:
+            numUse+=1
+            toUse=[0]
+        toOperateOn.sigma=toOperateOn.sigma[toUse]
+        toOperateOn.centers=toOperateOn.centers[toUse,:]
+        toOperateOn.hidden_shape=numUse
+        x0=np.concatenate((toOperateOn.weights, toOperateOn.centers.flatten(), toOperateOn.sigma.flatten()))
+        optRes.x=x0
+        optRes.fun=np.linalg.norm(toOperateOn.predict(X)-Y)**2+penalty*np.linalg.norm(toOperateOn.weights,ord=1)
+        if returnN:
+            return optRes, numUse
+        else:
             return optRes
 
-        if numEvals>=len(Y):
-            nGrid=np.arange(nLBnd,nUBnd+1)
-            optResArray=[evalForN(thisN) for thisN in nGrid]
-        else:
-            nGrid=np.linspace(nLBnd,nUBnd,numEvals, dtype=int)
-            optResArray=[evalForN(thisN) for thisN in nGrid]  # TODO: something more intelligent than straight grid search. We fully expect things to usually improve with more n as the penalty term changes
-
-        errs=list(map(lambda x: x.fun, optResArray))
-        minErrIndx=errs.index(min(errs))
-        bestOptRes=optResArray[minErrIndx]
-        bestN=nGrid[minErrIndx]
-        toOperateOn.breakAndSetFromOptVect(bestOptRes.x, (bestN,m))
-        if returnN:
-            return bestOptRes, bestN
-        else:
-            return bestOptRes
-
-    def optimizeAcrossPenalty(toOperateOn, X,Y, numNEvals=np.inf, kfolds=5, testSize=None, returnLambda=False):
+    def optimizeAcrossPenalty(toOperateOn, X,Y, kfolds=5, testSize=None, returnLambda=False):
         """
         uses k-fold evaluation to try and estimate a good value for the L1 penalty term from setting variable layers
         optimizes weights, sigmas and centers of an RBFN network but also finds best value of the number of hidden layers.
@@ -153,7 +143,7 @@ class RBFNwithParamTune(kmeansRBFN):
                 testX=X[testIndx,:]
             else:
                 trnX=X[trnIndx]
-                trnY=Y[testIndx]
+                testX=X[testIndx]
             trnY=Y[trnIndx]
             testY=Y[testIndx]
             accumFoldData.append(((trnX,trnY), (testX, testY)))
@@ -162,25 +152,16 @@ class RBFNwithParamTune(kmeansRBFN):
             for i,fold in enumerate(accumFoldData):
                 trnDat=fold[0]
                 testDat=fold[1]
-                optRes=toOperateOn.optimizeRBFNwithVariableLayers(trnDat[0], trnDat[1], numEvals=numNEvals, penalty=lamb)
+                optRes=toOperateOn.optimizeRBFNwithVariableLayers(trnDat[0], trnDat[1], penalty=lamb, zeroThreshold=1e-10, returnN=False)
                 # breakAndSetFromOptVect(toOperateOn,optRes.x) # currently unnecessary, but might make an ok safeguard if things change in the future and not set to best value at end
-                thisError[i]=np.linalg.norm(toOperateOn.predict(testDat[0]) - testDat[1])
+                thisError[i]=np.linalg.norm(toOperateOn.predict(testDat[0]) - testDat[1])**2 # notice that we are basically trying to minimize actual L2 and not L1 penalized
             return np.mean(thisError)
         lamb0=1
-        bnds=spo.Bounds(0, np.inf, True)
+        bnds=spo.Bounds(1, np.inf, True)
         lambOptRes=spo.minimize_scalar(minimizationFunction, bounds=bnds, options={'maxiter': 10, 'disp': True})
-        errs=[]; resAccum=[]
-        for fold in accumFoldData:
-            trnDat=fold[0]
-            testDat=fold[1]
-            optRes, optN=toOperateOn.optimizeRBFNwithVariableLayers(trnDat[0], trnDat[1], numEvals=numNEvals, penalty=lambOptRes.x, returnN=True)
-            # breakAndSetFromOptVect(toOperateOn,optRes.x) # currently unnecessary, but might make an ok safeguard if things change in the future and not set to best value at end
-            errs.append(np.linalg.norm(toOperateOn.predict(testDat[0]) - testDat[1]))
-            resAccum.append((optRes, optN))
-        minErrIndx=errs.index(min(errs))
-        bestOptRes=resAccum[minErrIndx]
-        toOperateOn.breakAndSetFromOptVect(bestOptRes[0].x, (bestOptRes[1],m))
+
+        totalOptRes=toOperateOn.optimizeRBFN(X,Y,penalty=lambOptRes.x)
         if returnLambda:
-            return bestOptRes,lambOptRes
+            return totalOptRes,lambOptRes
         else:
-            return bestOptRes
+            return totalOptRes

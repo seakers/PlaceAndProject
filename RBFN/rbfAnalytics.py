@@ -30,8 +30,8 @@ class rbfAnalyzer():
         # self.rbfn.fit(pointLocation, pointHeight)
         # self.rbfn=kmeansRBFN(int(numHiddenNodes/5), sigma=np.mean(shortestDists))
         # self.rbfn.fit(pointLocation, pointHeight)
-        self.rbfn=RBFNwithParamTune()
-        self.rbfn.fit(pointLocation, pointHeight, kfolds=3, numNEvals=3)
+        self.rbfn=RBFNwithParamTune(constantTerm=True)
+        self.rbfn.fit(pointLocation, pointHeight, kfolds=5)
         self.centers=self.rbfn.centers
         # self.sigmas=self.rbfn.sigmas
 

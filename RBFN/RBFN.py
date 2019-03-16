@@ -13,7 +13,7 @@ import scipy as sp
 from common import *
 
 class RBFN(object):
-    def __init__(self, hidden_shape, sigma=1.0):
+    def __init__(self, hidden_shape, sigma=1.0, constantTerm=False):
         """ radial basis function network
         # Arguments
             hidden_shape: number of hidden radial basis functions. Also, number of centers.
@@ -22,6 +22,8 @@ class RBFN(object):
         self.sigma = sigma
         self.centers = None
         self.weights = None
+        self.constant=0
+        self.activeConstant=constantTerm
 
     def _vectorized_exponential(self, radial):
         return np.exp(-radial**2/self.sigma**2)
@@ -40,7 +42,12 @@ class RBFN(object):
         else:
             locs=X
             cents=self.centers
-        return self._vectorized_exponential(sp.spatial.distance.cdist(locs, cents))
+        expMat = self._vectorized_exponential(sp.spatial.distance.cdist(locs, cents))
+        if self.activeConstant:
+            big=np.concatenate((np.ones((expMat.shape[0], 1)),expMat), axis=1)
+        else:
+            big=expMat
+        return big
 
     # def _calculate_interpolation_matrix(self, X):
     #     """ Calculates interpolation matrix using a kernel_function

@@ -4,8 +4,8 @@ import numpy as np
 
 
 class kmeansRBFN(RBFN):
-    def __init__(self, hidden_shape, sigma=1.0):
-        super().__init__(hidden_shape, sigma=sigma)
+    def __init__(self, hidden_shape, sigma=1.0, constantTerm=False):
+        super().__init__(hidden_shape, sigma=sigma, constantTerm=constantTerm)
 
     def _select_centers(self, X):
         if len(X.shape)>1:
