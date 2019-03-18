@@ -128,9 +128,9 @@ if __name__=="__main__":
             probName=pathParts[-1][:-8]
             print('analyzing: '+probName)
             # fixHeader(pathedMetricFile)
-            # runProblemAnalysis(probName,pathedMetricFile,r'./cityplotData/'+probName+'_pref.csv', fA, filePrepend=r'./output/fourier_')
-            # runProblemAnalysis(probName,pathedMetricFile,r'./cityplotData/'+probName+'_pref.csv', lA, filePrepend=r'./output/legendre_')
+            runProblemAnalysis(probName,pathedMetricFile,r'./cityplotData/'+probName+'_pref.csv', fA, filePrepend=r'./output/fourier_')
+            runProblemAnalysis(probName,pathedMetricFile,r'./cityplotData/'+probName+'_pref.csv', lA, filePrepend=r'./output/legendre_')
             runProblemAnalysis(probName,pathedMetricFile,r'./cityplotData/'+probName+'_pref.csv', rA, filePrepend=r'./output/rbf_')
-            # runComparisons(probName, pathedMetricFile, r'./cityplotData/'+probName+'_pref.csv')
+            runComparisons(probName, pathedMetricFile, r'./cityplotData/'+probName+'_pref.csv')
         else:
             print('skipped file: '+pathedMetricFile)

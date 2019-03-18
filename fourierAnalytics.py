@@ -298,7 +298,7 @@ def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=2, displ
     """
     if objHeaders is None:
         objHeaders=list(map(lambda n: 'obj: '+str(n),range(data.shape[1])))
-    mp=mP.lowDimMeanPlane(data) # create the mean plane
+    mp=lowDimMeanPlane(data) # create the mean plane
 
     runShowSaveClose(mp.draw2dMeanPlane,saveFigsPrepend+'_meanPlane.png',displayFig=displayFigs)
     runShowSaveClose(ft.partial(plotLogTradeRatios,mp,objHeaders),saveFigsPrepend+'_tradeRatios.png',displayFig=displayFigs)

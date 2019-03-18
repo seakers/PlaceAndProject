@@ -8,18 +8,25 @@ import sklearn.model_selection as sklcv
 
 class RBFNwithParamTune(kmeansRBFN):
     """ radial basis function network with auto-tuning parameters"""
-    def __init__(self, constantTerm=False):
-        super().__init__(1, sigma=1, constantTerm=constantTerm)
+    def __init__(self, numHiddenNodes=None, constantTerm=False):
+        if numHiddenNodes is None:
+            numHiddenNodes=1
+            self.numHideOverride=True
+        else:
+            self.numHideOverride=False
+        super().__init__(numHiddenNodes, sigma=1, constantTerm=constantTerm)
 
     def fit(self,X,Y, penalty=None, kfolds=None, testSize=None):
         self.centers=super()._select_centers(X)
         super().fit(X,Y)
+        if self.numHideOverride:
+            self.optimizeRBFN(X,Y)
         if kfolds is not None:
             self.optimizeAcrossPenalty(X, Y, kfolds=kfolds, testSize=testSize)
         elif penalty is not None:
             self.optimizeRBFNwithVariableLayers(self, X, Y, penalty=penalty)
         else:
-            self.optimizeRBFN(self, X,Y)
+            self.optimizeRBFN(X,Y)
         # assert optimizer already set own variables
 
     def _select_centers(self, X):
