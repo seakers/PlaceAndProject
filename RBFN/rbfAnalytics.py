@@ -30,8 +30,11 @@ class rbfAnalyzer():
         # self.rbfn.fit(pointLocation, pointHeight)
         # self.rbfn=kmeansRBFN(int(numHiddenNodes/5), sigma=np.mean(shortestDists))
         # self.rbfn.fit(pointLocation, pointHeight)
-        self.rbfn=RBFNwithParamTune(constantTerm=False)
-        self.rbfn.fit(pointLocation, pointHeight, kfolds=5)
+        self.rbfn=RBFNwithParamTune(numHiddenNodes=numHiddenNodes,constantTerm=False)
+        if numHiddenNodes is None:
+            self.rbfn.fit(pointLocation, pointHeight, kfolds=5)
+        else:
+            self.rbfn.fit(pointLocation, pointHeight)
         self.centers=self.rbfn.centers
         # self.sigmas=self.rbfn.sigmas
 
@@ -202,7 +205,7 @@ class rbfSummarizerAnalyzer(rbfAnalyzer):
     @classmethod
     def fromMeanPlane(cls,meanPlane,freqsToKeep=5):
         """returns a FourierAnalyzer which analyzes the residuals as defined by locations in the inputProjections"""
-        return rbfSummarizerAnalyzer(meanPlane.inputResidual, meanPlane.inputInPlane, freqsToKeep=freqsToKeep)
+        return rbfSummarizerAnalyzer(meanPlane.inputResidual, meanPlane.inputInPlane, frequenciesToEval=freqsToKeep, freqsToKeep=freqsToKeep)
 
 def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=2, displayFigs=True, isMaxObj=None):
     """

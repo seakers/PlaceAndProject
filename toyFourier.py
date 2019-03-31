@@ -1,7 +1,7 @@
 import numpy as np
 import scipy as sp
 import pandas as pd
-from pandas.tools.plotting import parallel_coordinates as paraCoor
+from pandas.plotting import parallel_coordinates as paraCoor
 import itertools as it
 import matplotlib.pyplot as plt
 import sklearn as skl
@@ -10,13 +10,15 @@ import functools as ft
 
 from meanPlane import *
 from common import *
-from fourierAnalytics import *
+import fourierAnalytics as fA
+import RBFN.rbfAnalytics as rA
+from polyfitting import legender as lA
 
-def unbalanced():
+def unbalanced(mC=fA):
     x=np.concatenate((np.linspace(0,0.5,32),0.5*np.ones(32)))
     y=np.concatenate((np.ones(32),    np.linspace(1,0,32)))
     data=np.vstack((x,y)).T
-    mp,fa=run2danalysis(data,saveFigsPrepend='unevenBoxDemo',freqsToKeep=100)
+    mp,fa=mC.run2danalysis(data,saveFigsPrepend='unevenBoxDemo',freqsToKeep=100)
     plt.figure()
     plt.plot(mp.inputInPlane,mp.inputResidual)
     plt.xlabel('projected inputs in the plane')
@@ -39,8 +41,8 @@ def fourierTesting():
     y=np.sin(2*np.pi*x)
     nyqFreq=len(x)//2
     # fa = SlowFourierAnalyzer(y,x,frequenciesToEval=np.concatenate((np.arange(nyqFreq)/nyqFreq,-np.arange(nyqFreq)/nyqFreq))) # what needs to agree.
-    faref = FourierAnalyzer(y,x)
-    fa=SlowFourierAnalyzer(y,x)
+    faref = fA.FourierAnalyzer(y,x)
+    fa=fA.SlowFourierAnalyzer(y,x)
     # fa=SlowFourierAnalyzer.fromMeanPlane(mp)
 
     print(fa.fftFreqs)
@@ -50,14 +52,14 @@ def fourierTesting():
 
     plt.figure()
     plt.hold('on')
-    spectral1dPowerPlot(fa)
-    spectral1dPowerPlot(faref)
+    fA.spectral1dPowerPlot(fa)
+    fA.spectral1dPowerPlot(faref)
     plt.show()
 
     plt.figure()
     plt.hold('on')
-    spectral1dPhasePlot(fa)
-    spectral1dPhasePlot(faref)
+    fA.spectral1dPhasePlot(fa)
+    fA.spectral1dPhasePlot(faref)
     plt.show()
 
     plt.figure()
@@ -73,14 +75,14 @@ def fourierTesting():
     plt.legend()
     plt.show()
 
-def circlePfrontDemo():
+def circlePfrontDemo(mC=fA):
     # seedList=np.linspace(0,np.pi/2,128)
     seedList=np.sort(np.random.rand(64)*np.pi/2)
     np.savetxt('quarterCircleSeed.csv',seedList)
     x=np.cos(seedList)
     y=np.sin(seedList)
     data=np.vstack((x,y)).T
-    mp,fa=run2danalysis(data,saveFigsPrepend='circleDemo')
+    mp,fa=mC.run2danalysis(data,saveFigsPrepend='circleDemo')
 
     plt.figure()
     plt.plot(mp.inputInPlane,mp.inputResidual,'.')
@@ -95,11 +97,11 @@ def circlePfrontDemo():
     plt.savefig('circleDemo_meanPlane.png')
     plt.show()
 
-def singleEvenBoxDemo():
+def singleEvenBoxDemo(mC=fA):
     x=np.concatenate((np.linspace(0,0.5,32),0.5*np.ones(32)))*2
     y=np.concatenate((np.ones(32),    np.linspace(1,0,32)))
     data=np.vstack((x,y)).T
-    mp,fa=run2danalysis(data,saveFigsPrepend='singleBoxDemo')
+    mp,fa=mC.run2danalysis(data,saveFigsPrepend='singleBoxDemo')
     plt.figure()
     plt.plot(mp.inputInPlane,mp.inputResidual)
     plt.xlabel('projected inputs in the plane')
@@ -112,29 +114,29 @@ def singleEvenBoxDemo():
     plt.savefig('singleBoxDemo_meanPlane.png')
     plt.show()
 
-def wavyPfrontDemo():
+def wavyPfrontDemo(mC, label=''):
     x=np.concatenate((np.linspace(0,0.25,32),0.25*np.ones(32),np.linspace(0.25,0.5,32),0.5*np.ones(32),np.linspace(0.5,0.75,32),0.75*np.ones(32),np.linspace(0.75,1,32),np.ones(32)))
     y=np.concatenate((np.ones(32),np.linspace(1,0.75,32),0.75*np.ones(32),np.linspace(0.75,0.5,32), 0.5*np.ones(32), np.linspace(0.5,0.25,32),0.25*np.ones(32),np.linspace(0.25,0,32)))
     data=np.vstack((x,y)).T
-    mp,fa=run2danalysis(data,saveFigsPrepend='boxyDemo',freqsToKeep=1000)
+    mp,fa=mC.run2danalysis(data,saveFigsPrepend='./output/boxyDemo'+label,freqsToKeep=1000)
     plt.figure()
     plt.plot(mp.inputInPlane,mp.inputResidual)
     plt.xlabel('projected inputs in the plane')
     plt.ylabel('residual to the input location from the plane')
-    plt.savefig('boxyDemo_residualPlot.png')
+    plt.savefig(label+'boxyDemo_residualPlot.png')
     plt.show()
     plt.figure()
     mp.draw2dMeanPlane()
     plt.axis('equal')
-    plt.savefig('boxyDemo_meanPlane.png')
+    plt.savefig(label+'boxyDemo_meanPlane.png')
     plt.show()
 
-def dim3hypersphereTesting():
+def dim3hypersphereTesting(mC=fA, label=''):
     # demo finding the mean plane in 3d
     numsmpl=30**2
     dummyTest3d = concaveHypersphere(numsmpl)
     np.savetxt('concaveHyperspherePoints.csv',dummyTest3d)
-    run3danalysis(dummyTest3d,saveFigsPrepend='3dhypersphere')
+    mC.run3danalysis(dummyTest3d,saveFigsPrepend='./output/3dhypersphere'+label)
     # xx,yy=map(lambda ar: ar.flatten(), np.meshgrid(np.linspace(0,1,128),np.linspace(0,1,128)))
     # zz=np.sin(2*np.pi*xx)*np.cos(2*np.pi*yy)
 
@@ -172,13 +174,19 @@ def positiveCovarDemo():
     print(testmp.normalVect)
     print('basis vectors')
     print(testmp.basisVects)
-    testmp.draw3dMeanPlane()
+    # testmp.draw3dMeanPlane()
+    ax = Axes3D(plt.gcf())
+    # ax.scatter(dummyTest3d[:, 0], dummyTest3d[:, 1], dummyTest3d[:, 2], '.', label='sample points')
+    ax.plot(dummyTest3d[:, 0], dummyTest3d[:, 1], dummyTest3d[:, 2], 'k.', label='sample points')
+    # ax.plot(mp.inputProjections[:,0],mp.inputProjections[:,1],label='Projections')
     plt.show()
 
 if __name__=='__main__':
     # fourierTesting()
-    # wavyPfrontDemo()
+    # wavyPfrontDemo(fA, 'fourier');  wavyPfrontDemo(lA, 'legpoly');
+    wavyPfrontDemo(rA, 'rbfn')
     # circlePfrontDemo()
-    # dim3hypersphereTesting()
+    # dim3hypersphereTesting(fA, 'fourier'); dim3hypersphereTesting(lA, 'legpoly');
+    # dim3hypersphereTesting(rA,'rbfn')
     # unbalanced()
-    positiveCovarDemo()
+    # positiveCovarDemo()

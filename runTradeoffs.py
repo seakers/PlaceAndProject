@@ -85,9 +85,16 @@ def runProblemAnalysis(probName,metricsFile,preferenceFile, module, filePrepend=
         w.warn('not pointing to origin:'+str(valErr))
     # runAnalysisDict[min(len(headers)-2,2)](normalizedData,headers,None) # for testing
 
-def runComparisons(probName,metricsFile,preferenceFile, filePrepend="./output/"):
+def runComparisons(probName,metricsFile,preferenceFile, filePrepend=None):
     dataRead=pd.read_csv(metricsFile)
     headers=dataRead.columns.values
+
+    if filePrepend is not None:
+        cps=filePrepend+probName+"_comparePlot.png"
+        mps=filePrepend+probName+"_multiplePlot.png"
+    else:
+        cps=None
+        mps=None
 
     # read preference file and get whether will need to multiply by -1 to make minimization
     with open(preferenceFile) as f:
@@ -111,8 +118,8 @@ def runComparisons(probName,metricsFile,preferenceFile, filePrepend="./output/")
         printCooperating(meanCoop, headers)
     knownClasses=(fA.FourierSummarizerAnalyzer, lA.LegendreSummarizerAnalyzer, rA.rbfSummarizerAnalyzer)
     cP.paramAccuracyPlot(normalizedData,knownClasses,
-                         analyzerClassNames=('fourier series','legendre polynomials','exponential RBF NN'))
-    cP.multipleReconstructionPlotFromData(normalizedData, knownClasses, numTermsToUse=4, analyzerClassNames=None, holdoutData=None, saveFig=None, displayFig=True, objLabels=None)
+                         analyzerClassNames=('fourier series','legendre polynomials','exponential RBF NN'), saveFig=cps)
+    cP.multipleReconstructionPlotFromData(normalizedData, knownClasses, numTermsToUse=4, analyzerClassNames=None, holdoutData=None, saveFig=mps, displayFig=True, objLabels=None)
 
 if __name__=="__main__":
     metricsFiles=list(filter(lambda f: f[-8:]=='_met.csv' and 'walker' not in f, os.listdir('./cityplotData')))
@@ -128,9 +135,9 @@ if __name__=="__main__":
             probName=pathParts[-1][:-8]
             print('analyzing: '+probName)
             # fixHeader(pathedMetricFile)
-            runProblemAnalysis(probName,pathedMetricFile,r'./cityplotData/'+probName+'_pref.csv', fA, filePrepend=r'./output/fourier_')
-            runProblemAnalysis(probName,pathedMetricFile,r'./cityplotData/'+probName+'_pref.csv', lA, filePrepend=r'./output/legendre_')
-            runProblemAnalysis(probName,pathedMetricFile,r'./cityplotData/'+probName+'_pref.csv', rA, filePrepend=r'./output/rbf_')
-            runComparisons(probName, pathedMetricFile, r'./cityplotData/'+probName+'_pref.csv')
+            # runProblemAnalysis(probName,pathedMetricFile,r'./cityplotData/'+probName+'_pref.csv', fA, filePrepend=r'./output/fourier_')
+            # runProblemAnalysis(probName,pathedMetricFile,r'./cityplotData/'+probName+'_pref.csv', lA, filePrepend=r'./output/legendre_')
+            # runProblemAnalysis(probName,pathedMetricFile,r'./cityplotData/'+probName+'_pref.csv', rA, filePrepend=r'./output/rbf_')
+            runComparisons(probName, pathedMetricFile, r'./cityplotData/'+probName+'_pref.csv', filePrepend=r'./output/')
         else:
             print('skipped file: '+pathedMetricFile)

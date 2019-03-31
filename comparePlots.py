@@ -24,12 +24,13 @@ def createModels(data, analyzerClasses, numTermsToUse=None, analyzerClassNames=N
     return commonMeanPlane, models, numTermsToUse, analyzerClassNames
 
 #slow, ugly, ugly hack. Better to modify the analyzers to give incremental output than just making a bunch of analyzers. TODO
-def paramAccuracyPlot(data, analyzerClasses, numTermsToUse=4, analyzerClassNames=None, holdoutData=None, saveFig=None, displayFig=True):
+def paramAccuracyPlot(data, analyzerClasses, numTermsToUse=10, analyzerClassNames=None, holdoutData=None, saveFig=None, displayFig=True):
     if holdoutData is None:
         holdoutData=data
 
     commonMeanPlane, models, numTermsToUse, analyzerClassNames = createModels(data, analyzerClasses, numTermsToUse, analyzerClassNames)
 
+    plt.figure()
     for i,modelClass in enumerate(models):
         print('reconstructing for model: '+ str(i))
         errs=np.array([reconstructionErr(holdoutData, commonMeanPlane, m) for m in modelClass])
@@ -64,6 +65,7 @@ def multipleReconstructionPlot(meanPlanes, analyzers, placesToReconstruct=None, 
     n=next(tmp).embedDim
     if n==2:
         def allPlots():
+            plt.figure()
             for meanPlane, analyzer in zip(meanPlanesCpy,analyzers):
                 inZ=getZ(meanPlane)
                 aC.approximationPlot2d(meanPlane, analyzer, objLabels, inZ)

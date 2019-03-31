@@ -1,19 +1,57 @@
-Legendre
-RBF NN
-Compare Plots
--> Response at level plot
--> multiple reconstructions
-Debugging
--> Why are Legendre and RBF so ill-conditioned?
+Code and problem issues:
+  Legendre
+U RBF NN
+  X > get it to stop defaulting to 0 so much.
+  > Bias term.
+  Fourier -- get it better conditioned with more elements
+  > see paper on nonuniform 2d (should be in Mendeley)
+I General Polynomial with bias term
+I Cheybychev polynomial
+RB with entire dataset?
 
-Write up report
+Plots:
+U Tradeoff plots for RBFNN and Legendre
+  > Need to fix derivative of Legendre
+  > currently have run issues
+  Compare Plots
+  > Response at level plot
+  > multiple reconstructions -- adjust coloring
+  Debugging
+  > Why are Legendre and RBF so ill-conditioned?
+U Comparison Plots for synthetic problems
+T Plotting Variations for RBFN when doing 2d
+U Fix all the label problems with the plots in general
+  >frequency instead of order
+  >not displaying center locations
+T Comparison Plot with holdout data
 
-Artificial Datasets
+Others:
+I Artificial Datasets
+
+Report:
+U Add some stuff on machine learning.
 
 Refactor for simplicity before proceeding
-RBF-autotune params
-Cheybyshev
 
-More sophisticated NN
-Constrained Mean Plane
-Finish Report
+Dreams:
+  More sophisticated NN
+  heirarchical modelling from steps with explanation module
+  Constrained Mean Plane
+
+X New Mean Plane Methods
+  >Turns out idea was already implemented
+  >Maybe something more sophisticated is necessary
+  Get the optimized mean plane method running anyway
+U verify that current mean plane isn't degenerate by just checking normal vectors
+
+X Synthetic Runs with non-FFT
+
+T FFT with truncated Vandermonde
+
+Redo plots to better take advantage of particularities of RBF and Legendre.
+
+Legend:
+U urgent
+T todo
+I ignore
+X done

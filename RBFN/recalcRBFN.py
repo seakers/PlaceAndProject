@@ -11,9 +11,9 @@ class RBFNwithParamTune(kmeansRBFN):
     def __init__(self, numHiddenNodes=None, constantTerm=False):
         if numHiddenNodes is None:
             numHiddenNodes=1
-            self.numHideOverride=True
-        else:
             self.numHideOverride=False
+        else:
+            self.numHideOverride=True
         super().__init__(numHiddenNodes, sigma=1, constantTerm=constantTerm)
 
     def fit(self,X,Y, penalty=None, kfolds=None, testSize=None):
@@ -41,13 +41,13 @@ class RBFNwithParamTune(kmeansRBFN):
         nm=np.prod(dataShape)
         curBrk=0
         endBrk=n+curBrk
-        sigmas=optVars[curBrk:endBrk]
+        alphas=optVars[curBrk:endBrk]
         curBrk=endBrk
         endBrk+=nm
         centers=np.reshape(optVars[curBrk:endBrk],dataShape)
         curBrk=endBrk
         endBrk+=n
-        alphas=optVars[curBrk:]
+        sigmas=optVars[curBrk:]
 
         toOperateOn.sigma=sigmas
         toOperateOn.centers=centers
@@ -67,9 +67,11 @@ class RBFNwithParamTune(kmeansRBFN):
         n=toOperateOn.hidden_shape
         if len(X.shape)==1:
             m=1
+            avgDist=np.mean(np.diff(X))
         else:
             m=X.shape[1]
-        toOperateOn.sigma=np.ones(n)
+            avgDist=np.mean(sp.spatial.distance.pdist(X), axis=None)/2
+        toOperateOn.sigma=np.ones(n) * (avgDist/n)
         toOperateOn.centers=super()._select_centers(X) # initial guess for cetners.
         super().fit(X,Y) # initial guess for alphas.
         def minimizationFunction(optVars):
