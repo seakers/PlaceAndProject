@@ -8,10 +8,13 @@ from sklearn.decomposition import pca
 import functools as ft
 from meanPlane import *
 import scipy.ndimage.filters as spndf
+import numpy.linalg as npl
 
 from common import *
+import common as cmn
 from analyticsCommon import *
 from tradeoffMatrixImage import *
+import warnings
 
 class SlowFourierAnalyzer():
     """
@@ -125,13 +128,54 @@ def forwardTransform(freqs, locations, functionVals):
         pointLoc=locations[:,np.newaxis]
     else:
         pointLoc=locations
-    exponentTerm=-2*np.pi*1j*np.dot(pointLoc,freqProd)
+    exponentTerm=-2*np.pi*1j*np.dot(pointLoc,freqProd) # no trasnpose?
     # return np.dot(self.pointHeight,np.exp(exponentTerm)).reshape(self.numFreqs)/self.pointHeight.size
     if len(freqs.shape)>1:
         numFreqs=list(map(len, freqs))
     else:
         numFreqs=len(freqs)
     return np.dot(functionVals,np.exp(exponentTerm)).reshape(numFreqs)
+# def forwardTransform(freqs, locations, functionVals):
+#     return truncatedVandermondeForwardTransform(freqs,locations,functionVals)
+
+def truncatedVandermondeForwardTransform(freqs, locations, functionVals, threshold=None):
+    freqProd=freqTuples(freqs)
+    if len(locations.shape)==1:
+        pointLoc=locations[:,np.newaxis]
+    else:
+        pointLoc=locations
+    # TODO: noncomplex evaluation of vandermonde
+    exponentTerm=2*np.pi*1j*np.dot(pointLoc,freqProd) # no transpose?
+    pseudoVander=np.exp(exponentTerm)
+
+    U,S,Vh=np.linalg.svd(pseudoVander)
+    numTake=0
+    filtS=S
+    if threshold is None:
+        Eps= np.finfo(functionVals.dtype).eps
+        Neps = np.prod(cmn.numpyze(freqs.shape)) * Eps * S[0] #truncation due to ill-conditioning
+        # Nt = max(np.argmax(Vh, axis=0)) #"Automatic" determination of threshold due to Runge's phenomenon
+        # threshold=min(Neps, Nt)
+        threshold=Neps
+    while numTake<=0:
+        filter=S>threshold
+        numTake=filter.sum()
+        if numTake>0:
+            filtU=U[:,:numTake]; filtS=S[:numTake]; filtVh=Vh[:numTake, :]
+        else:
+            if threshold>1e-13:
+                threshold=threshold/2
+                warnings.warn('cutting threshold for eigenvalues to '+str(threshold))
+            else:
+                warnings('seems all eigenvalues are zero (<1e-13), setting to zero and breaking')
+                filtS=np.zeros_like(S)
+    truncVander=np.dot(filtU,np.dot(np.diag(filtS),filtVh))
+    ret, _, _, _=npl.lstsq(truncVander, functionVals, rcond=None)
+    if len(freqs.shape)>1:
+        numFreqs=list(map(len, freqs))
+    else:
+        numFreqs=len(freqs)
+    return np.reshape(ret, numFreqs)
 
 def reconstruction(freqs, locations, spectrum,numPts):
     freqProd=np.array(freqs)
@@ -472,7 +516,7 @@ class FourierSummarizer():
                 f.writelines(('captured power: '+str(np.sum(np.abs(self.freqSpectra)**2)), 'lost power: '+str(self.lostPower)))
 
 class FourierSummarizerAnalyzer(SlowFourierAnalyzer):
-    def __init__(self,pointHeight,pointLocation,frequenciesToEval=None,freqsToKeep=5):
+    def __init__(self,pointHeight,pointLocation,frequenciesToEval=None,freqsToKeep=15):
         super(FourierSummarizerAnalyzer, self).__init__(pointHeight,pointLocation,frequenciesToEval)
         self.summarizer=FourierSummarizer(freqsToKeep,wavelenth=np.ptp(self.pointLocation,axis=0))
         self.addSpectralFilter(self.summarizer)

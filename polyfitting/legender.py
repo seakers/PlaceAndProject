@@ -174,7 +174,7 @@ def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=5, displ
         rts=None
 
     aC.runShowSaveClose(mp.draw2dMeanPlane,mps,displayFig=displayFigs)
-    aC.runShowSaveClose(ft.partial(tMI.plotLogTradeRatios,mp,objHeaders),trs,displayFig=displayFigs)
+    # aC.runShowSaveClose(ft.partial(tMI.plotLogTradeRatios,mp,objHeaders),trs,displayFig=displayFigs)
 
     if ordersToRun is None:
         ordersToRun=min(freqsToKeep, 2*np.sqrt(data.shape[0])) # see: https://en.wikipedia.org/wiki/Runge%27s_phenomenon#Mitigations_to_the_problem
@@ -188,7 +188,7 @@ def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=5, displ
     aC.runShowSaveClose(ft.partial(aC.spectral1dPowerPlot_nonFFT,fa),spts,displayFig=displayFigs)
 
     aC.runShowSaveClose(ft.partial(aC.approximationPlot2d,mp,fa,objHeaders),rts,displayFig=displayFigs)
-    # aC.runShowSaveClose(ft.partial(plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)
+    aC.runShowSaveClose(ft.partial(tMI.plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)
     return (mp,fa)
 
 def run3danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=5**2,displayFigs=True, ordersToRun=None):
@@ -216,7 +216,7 @@ def run3danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=5**2,dis
     aC.runShowSaveClose(ft.partial(aC.approximationPlot3d,mp,fa),saveFigsPrepend+'_reverseTransform.png',displayFig=displayFigs)
     aC.runShowSaveClose(ft.partial(aC.plot3dErr,mp.inputInPlane,mp.inputResidual),saveFigsPrepend+'_errorPlot.png',displayFig=displayFigs)
     aC.runShowSaveClose(fa.powerDeclineReport,saveFigsPrepend+'_powerDeclineReport.png',displayFig=displayFigs)
-    # aC.runShowSaveClose(ft.partial(plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)
+    aC.runShowSaveClose(ft.partial(tMI.plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)
 
 def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None,freqsToKeep=None,displayFigs=True, ordersToRun=None):
     """
@@ -242,7 +242,7 @@ def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None,freqsToKeep=N
         fa.report(saveFigsPrepend+'_report.csv')
 
     aC.runShowSaveClose(fa.powerDeclineReport,saveFigsPrepend+'_powerDeclinePlot.png',displayFig=displayFigs)
-    # aC.runShowSaveClose(ft.partial(tMI.plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)
+    aC.runShowSaveClose(ft.partial(tMI.plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)
 
 class LegendreSummarizerAnalyzer(CulledLegenderAnalyzer):
     """
