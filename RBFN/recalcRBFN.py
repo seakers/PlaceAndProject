@@ -1,4 +1,5 @@
 from RBFN.kmeansRBFN import kmeansRBFN
+from RBFN.baseRBFN import RBFN
 
 import scipy.optimize as spo
 import scipy as sp
@@ -67,19 +68,31 @@ class RBFNwithParamTune(kmeansRBFN):
         n=toOperateOn.hidden_shape
         if len(X.shape)==1:
             m=1
-            avgDist=np.mean(np.diff(X))
+            avgDist=np.mean(np.abs(np.diff(X)))
         else:
             m=X.shape[1]
             avgDist=np.mean(sp.spatial.distance.pdist(X), axis=None)/2
         toOperateOn.sigma=np.ones(n) * (avgDist/n)
         toOperateOn.centers=super()._select_centers(X) # initial guess for cetners.
-        super().fit(X,Y) # initial guess for alphas.
+        # super().fit(X,Y) # initial guess for alphas.
+        if len(X.shape)==1:
+            dists=np.abs(np.tile(toOperateOn.centers[:,np.newaxis],(1, len(Y)))-np.tile(X,(len(toOperateOn.centers),1)))
+        else:
+            dists=sp.spatial.distance.cdist(toOperateOn.centers, X)
+        def closeVals(d,o):
+            b=d<o
+            if any(b):
+                return np.mean(Y[d<o])
+            else:
+                return Y[np.argmin(d)]
+        toOperateOn.weights=np.array([closeVals(d,o) for o,d in zip(toOperateOn.sigma,dists)])
+
         def minimizationFunction(optVars):
             alphas,centers, sigmas = toOperateOn.breakAndSetFromOptVect(optVars, (n,m))
 
             # update=super().fit(X,Y) #unneeded, already got the weights and set in previous function
             yHat=toOperateOn.predict(X)
-            return np.linalg.norm(Y-yHat)**2 + penalty*np.linalg.norm(alphas,ord=1)
+            return np.linalg.norm(Y-yHat) + penalty*np.linalg.norm(alphas,ord=1)
         x0=np.concatenate((toOperateOn.weights, toOperateOn.centers.flatten(), toOperateOn.sigma.flatten()))
         y0=minimizationFunction(x0)
 
@@ -102,6 +115,10 @@ class RBFNwithParamTune(kmeansRBFN):
         :param penalty: L1 penalty term for having high N
         :return: sets toOperateOn to the best found values (as determined by the L1 penalized weights added to the L2 loss. returns the optimization object from sciply.optimize
         """
+        if len(X.shape) >1:
+            toOperateOn.hidden_shape=X.shape[0]
+        else:
+            toOperateOn.hidden_shape=len(X)
         optRes=toOperateOn.optimizeRBFN(X,Y,penalty=penalty) # obviously, will optimize for higher N. This is training data after all
         # assume toOperateOn set by optimization
         toUse=np.abs(toOperateOn.weights) > zeroThreshold
@@ -120,7 +137,7 @@ class RBFNwithParamTune(kmeansRBFN):
         toOperateOn.hidden_shape=numUse
         x0=np.concatenate((toOperateOn.weights, toOperateOn.centers.flatten(), toOperateOn.sigma.flatten()))
         optRes.x=x0
-        optRes.fun=np.linalg.norm(toOperateOn.predict(X)-Y)**2+penalty*np.linalg.norm(toOperateOn.weights,ord=1)
+        optRes.fun=np.linalg.norm(toOperateOn.predict(X)-Y)+penalty*np.linalg.norm(toOperateOn.weights,ord=1)
         if returnN:
             return optRes, numUse
         else:
@@ -163,10 +180,12 @@ class RBFNwithParamTune(kmeansRBFN):
                 testDat=fold[1]
                 optRes=toOperateOn.optimizeRBFNwithVariableLayers(trnDat[0], trnDat[1], penalty=lamb, zeroThreshold=1e-10, returnN=False)
                 # breakAndSetFromOptVect(toOperateOn,optRes.x) # currently unnecessary, but might make an ok safeguard if things change in the future and not set to best value at end
-                thisError[i]=np.linalg.norm(toOperateOn.predict(testDat[0]) - testDat[1])**2 # notice that we are basically trying to minimize actual L2 and not L1 penalized
+                thisError[i]=np.linalg.norm(toOperateOn.predict(testDat[0]) - testDat[1]) # notice that we are basically trying to minimize actual L2 and not L1 penalized
             return np.mean(thisError)
-        lamb0=1
-        bnds=spo.Bounds(1, np.inf, True)
+        lamb0=np.linalg.norm(Y,ord=2)/np.linalg.norm(Y,ord=1)
+        # lamb0=0.0001
+        # lamb0=1
+        bnds=spo.Bounds(0, np.inf, True)
         lambOptRes=spo.minimize_scalar(minimizationFunction, bounds=bnds, options={'maxiter': 10, 'disp': True})
 
         totalOptRes=toOperateOn.optimizeRBFN(X,Y,penalty=lambOptRes.x)

@@ -30,6 +30,7 @@ I Artificial Datasets
 
 Report:
 U Add some stuff on machine learning.
+Alternate paper idea: Legendre only, simplified mean plane only. Go through a problem and estimate convex regions for interest
 
 Refactor for simplicity before proceeding
 

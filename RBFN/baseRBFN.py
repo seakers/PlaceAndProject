@@ -1,6 +1,6 @@
 """
 based on:
-File: RBFN.py
+File: baseRBFN.py
 Author: Octavio Arriaga
 Email: arriaga.camargo@email.com
 Github: https://github.com/oarriaga

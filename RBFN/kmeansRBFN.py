@@ -1,4 +1,4 @@
-from RBFN.RBFN import RBFN
+from RBFN.baseRBFN import RBFN
 import sklearn.cluster as sklc
 import numpy as np
 
