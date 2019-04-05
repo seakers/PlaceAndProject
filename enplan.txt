@@ -1,3 +1,14 @@
+Fix Legendre Derivative
+X> Make it run
+X> Tradeoff Plot
+T> Verify derivative calculated Correctly
+
+Hessian Calculation
+> Make it run
+> Find points
+>
+
+<><><><><><><><><><><><><><><>><> OLD <><><><><><><><><>><><><><<><><><><><><><><>><>><><><><>
 Code and problem issues:
   Legendre
 U RBF NN

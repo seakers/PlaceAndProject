@@ -98,7 +98,11 @@ def legReconstructDerivative(freqs, locations, spectrum, numPts):
     :return: derivative of iFFT of the spectrum as an array with shape (Npts, Ncomponent) or (Ncomponent,) if 1-d
     """
     deriv=leg.legder(spectrum, axis=0)
-    return leg.legval(locations, deriv)
+    return genericLegVal(locations, deriv)
+
+def legHessian(freqs, locations, spectrum, numPts):
+    deriv=leg.legder(spectrum,m=2,axis=0)
+    return genericLegVal(locations,deriv)
 
 class SlowLegendreAnalyzer(PolynomialAnalyzer):
     def __init__(self,pointHeight,pointLocation,ordersToEval=None, normalizeMin=None, normalizeRange=None):
