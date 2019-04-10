@@ -1,4 +1,4 @@
-import fourierAnalytics as fA
+from FourierFitting import fourierAnalytics as fA
 from RBFN import rbfAnalytics as rA
 from polyfitting import legender as lA
 import itertools as it

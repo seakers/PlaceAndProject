@@ -1,4 +1,4 @@
-from fourierAnalytics import *
+from FourierFitting.fourierAnalytics import *
 
 def plotMeanPlaneTradeRatios(mp, objLabels,preconditioner=None):
     """

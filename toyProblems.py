@@ -1,7 +1,7 @@
 import scipy as sp
 
 from Common.common import *
-import fourierAnalytics as fA
+from FourierFitting import fourierAnalytics as fA
 
 
 def unbalanced(mC=fA):
