@@ -1,6 +1,6 @@
 import scipy as sp
 
-from common import *
+from Common.common import *
 
 def filteredSpectrum(inputFilters, spectralFilters,frequencies,locations,heights,forwardTransform):
     """

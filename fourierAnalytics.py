@@ -1,19 +1,4 @@
-import numpy as np
-import scipy as sp
-import pandas as pd
-import itertools as it
-import matplotlib.pyplot as plt
-import sklearn as skl
-from sklearn.decomposition import pca
-import functools as ft
-from meanPlane import *
-import scipy.ndimage.filters as spndf
-import numpy.linalg as npl
-
-from common import *
-import common as cmn
-from analyticsCommon import *
-from tradeoffMatrixImage import *
+from plottingStuffAndDecisionMakers.tradeoffMatrixImage import *
 import warnings
 
 class SlowFourierAnalyzer():

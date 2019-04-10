@@ -5,10 +5,9 @@ import matplotlib.pyplot as plt
 import numpy.polynomial.legendre as leg
 import warnings
 
-import common as cmn
-import meanPlane as mP
-import tradeoffMatrixImage as tMI
-import analyticsCommon as aC
+from MeanPlanes import meanPlane as mP
+from plottingStuffAndDecisionMakers import tradeoffMatrixImage as tMI
+from Common import analyticsCommon as aC, common as cmn
 
 #nice reference: http://mathfaculty.fullerton.edu/mathews/n2003/LegendrePolyMod.html
 from polyfitting.polycommon import PolynomialAnalyzer, PolynomialSummarizer

@@ -1,13 +1,6 @@
-import numpy as np
-import pandas as pd
-import itertools as it
-import matplotlib.pyplot as plt
-import sklearn as skl
-from sklearn.decomposition import pca
-import functools as ft
 import scipy.optimize as spo
 
-from common import *
+from Common.common import *
 
 # TODO: Constrain to be postitive. Use Quadprog from pip
 

@@ -4,8 +4,7 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-import analyticsCommon as aC
-import common as cmn
+from Common import analyticsCommon as aC, common as cmn
 
 
 class PolynomialAnalyzer():

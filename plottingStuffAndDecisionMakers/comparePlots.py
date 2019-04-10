@@ -1,10 +1,10 @@
 import numpy as np
-import meanPlane as mP
+from MeanPlanes import meanPlane as mP
 import matplotlib.pyplot as plt
 import itertools as it
 
-import common as cmn
-import analyticsCommon as aC
+from Common import analyticsCommon as aC
+
 
 def reconstructionErr(refY, meanPlane, analyzer):
     return np.squeeze(np.mean(np.linalg.norm(refY-aC.reconstructInOriginalSpace(meanPlane, analyzer, meanPlane.projectToPlaneCoor(refY))))) # hack. assumes refY are training points

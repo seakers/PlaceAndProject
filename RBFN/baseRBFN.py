@@ -10,7 +10,7 @@ but it's rather poor and rudimentary, so made lots of mods
 """
 
 import scipy as sp
-from common import *
+from Common.common import *
 
 class RBFN(object):
     def __init__(self, hidden_shape, sigma=1.0, constantTerm=False):

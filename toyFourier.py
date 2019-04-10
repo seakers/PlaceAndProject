@@ -1,18 +1,8 @@
-import numpy as np
 import scipy as sp
-import pandas as pd
-from pandas.plotting import parallel_coordinates as paraCoor
-import itertools as it
-import matplotlib.pyplot as plt
-import sklearn as skl
-from sklearn.decomposition import pca
-import functools as ft
 
-from meanPlane import *
-from common import *
+from Common.common import *
 import fourierAnalytics as fA
-import RBFN.rbfAnalytics as rA
-from polyfitting import legender as lA
+
 
 def unbalanced(mC=fA):
     x=np.concatenate((np.linspace(0,0.5,32),0.5*np.ones(32)))
@@ -168,7 +158,7 @@ def positiveCovarDemo():
     print(sprnco)
 
 #     run3danalysis(dummyTest3d)
-    import meanPlane as mp
+    from MeanPlanes import meanPlane as mp
     testmp=mp.lowDimMeanPlane(dummyTest3d)
     print('normal vector')
     print(testmp.normalVect)
@@ -184,9 +174,9 @@ def positiveCovarDemo():
 if __name__=='__main__':
     # fourierTesting()
     # wavyPfrontDemo(fA, 'fourier');  wavyPfrontDemo(lA, 'legpoly');
-    wavyPfrontDemo(rA, 'rbfn')
+    # wavyPfrontDemo(rA, 'rbfn')
     # circlePfrontDemo()
     # dim3hypersphereTesting(fA, 'fourier'); dim3hypersphereTesting(lA, 'legpoly');
     # dim3hypersphereTesting(rA,'rbfn')
     # unbalanced()
-    # positiveCovarDemo()
+    positiveCovarDemo()

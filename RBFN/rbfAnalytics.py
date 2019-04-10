@@ -1,9 +1,8 @@
-from tradeoffMatrixImage import *
-from analyticsCommon import *
+from plottingStuffAndDecisionMakers.tradeoffMatrixImage import *
+from Common.analyticsCommon import *
 
-from RBFN.baseRBFN import RBFN
 from RBFN.recalcRBFN import RBFNwithParamTune
-from RBFN.kmeansRBFN import kmeansRBFN
+
 
 class rbfAnalyzer():
     def __init__(self,pointHeight,pointLocation,numHiddenNodes=None):

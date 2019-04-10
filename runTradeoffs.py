@@ -7,8 +7,9 @@ import pandas as pd
 import os
 import warnings as w
 
-import meanPlane as mp
-import comparePlots as cP
+from MeanPlanes import meanPlane as mp
+from plottingStuffAndDecisionMakers import comparePlots as cP
+
 
 def anyCompetion(sample):
     ranks=np.argsort(sample, axis=0)

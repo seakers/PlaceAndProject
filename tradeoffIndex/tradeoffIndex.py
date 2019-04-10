@@ -1,13 +1,11 @@
-import numpy as np
-import matplotlib.pyplot as plt
 from blist import sortedlist
 import itertools as it
 from functools import wraps
 import bisect as bi
 import collections as col
 from functools import partial
-from common import *
-import scipy.stats as sps
+from Common.common import *
+
 
 def preprocSampleAndAxes(functionToPreproc):
     """ decorator function for preprocessing and posprocessing a function which picks subarrays for sampleToFollow, obj1, obj2
@@ -333,7 +331,6 @@ def _timingTesting():
     timesMehmet=-np.ones(numTest.shape)
     timesFaster=-np.ones(numTest.shape)
 
-    import gc
     import timeit as tt
     import pandas as pd
 
