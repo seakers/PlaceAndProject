@@ -20,18 +20,18 @@ class MeanPlane():
         self.paretoSamples=paretoSamples
         self._centeredSamples=paretoSamples-self.meanPoint
         self.embedDim=paretoSamples.shape[1]
-        self._U, self._S, self._V=np.linalg.svd(self._centeredSamples)
+        self._U, self._S, self._Vt=np.linalg.svd(self._centeredSamples)
 
     @property
     def normalVect(self):
         """
         :return: the normalized normal vector to the plane
         """
-        return self._V[-1,:]
+        return self._Vt[-1, :]
 
     @property
     def basisVects(self):
-        return self._V[:-1,:]
+        return self._Vt[:-1, :]
 
     @property
     def projectionToPlaneMat(self): # I do believe this is the same as basisVects actually
@@ -173,7 +173,7 @@ class ParetoMeanPlane(MeanPlane):
     def __init__(self,paretoSamples):
         super(ParetoMeanPlane,self).__init__(paretoSamples)
         if np.all(self.normalVect<0):
-            self._V*=-1 # default to pointing out--positive
+            self._Vt*=-1 # default to pointing out--positive
             self._U*=-1
         elif np.any(self.normalVect<0): # if not all negative or positive
             raise NotPointingToOriginError(self.normalVect)

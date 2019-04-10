@@ -66,7 +66,7 @@ def tradeoffCalcSingleLoc(meanPlane, fourierAnalyzer,loc,obj1,obj2):
     else:
         dirToTravel=np.array([1,])[:,np.newaxis]
     moveInY=np.real(np.dot(gradYwrtX,dirToTravel)) # should be real
-    return -moveInY[obj1]/moveInY[obj2]
+    return -moveInY[obj2]/moveInY[obj1]
 
 def tradeoffCalc(meanPlane, fourierAnalyzer,locations,obj1,obj2):
     accum=[]

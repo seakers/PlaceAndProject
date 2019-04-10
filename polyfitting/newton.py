@@ -104,9 +104,20 @@ def newtReconstructDerivative(freqs, locations, spectrum, numPts):
     :return: derivative of iFFT of the spectrum as an array with shape (Npts, Ncomponent) or (Ncomponent,) if 1-d
     """
     deriv=poly.polyder(spectrum, axis=0)
-    return poly.polyval(locations, deriv)
+    return genericNewtVal(locations, deriv)
 
+def newtReconstructHessian(freqs,locations, spectrum, numPts):
+    """
+
+    :param freqs:
+    :param locations:
+    :param spectrum:
+    :param numPts:
+    :return:
+    """
+    deriv=poly.polyder(spectrum,m=2,axis=0)
+    return genericNewtVal(locations,deriv)
 
 class newtonDirectAnalyzer(PolynomialAnalyzer):
     def __init__(self,pointHeight,pointLocation,ordersToEval=None, normalizeMin=None, normalizeRange=None):
-        super().__init__(newtForwardTransform, newtReconstruct, newtReconstructDerivative, pointHeight,pointLocation,ordersToEval=None, normalizeMin=None, normalizeRange=None)
+        super().__init__(newtForwardTransform, newtReconstruct, newtReconstructDerivative, newtReconstructHessian, pointHeight,pointLocation,ordersToEval=None, normalizeMin=None, normalizeRange=None)

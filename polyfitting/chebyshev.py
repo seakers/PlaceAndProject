@@ -1,6 +1,6 @@
 import numpy as np
 from numpy import linalg as npl
-from numpy.polynomial import chebyshev as cheb, polynomial as poly
+from numpy.polynomial import chebyshev as cheb
 
 from polyfitting.polycommon import PolynomialAnalyzer
 
@@ -95,10 +95,21 @@ def chebReconstructDerivative(freqs, locations, spectrum, numPts):
     :param numPts:
     :return: derivative of iFFT of the spectrum as an array with shape (Npts, Ncomponent) or (Ncomponent,) if 1-d
     """
-    deriv=poly.polyder(spectrum, axis=0)
-    return poly.polyval(locations, deriv)
+    deriv=cheb.chebder(spectrum, axis=0)
+    return genericChebVal(locations, deriv)
 
+def chebReconstructHessian(freqs,locations, spectrum, numPts):
+    """
+
+    :param freqs:
+    :param locations:
+    :param spectrum:
+    :param numPts:
+    :return:
+    """
+    deriv=cheb.chebder(spectrum,m=2,axis=0)
+    return genericChebVal(locations,deriv)
 
 class chebDirectAnalyzer(PolynomialAnalyzer):
     def __init__(self,pointHeight,pointLocation,ordersToEval=None, normalizeMin=None, normalizeRange=None):
-        super().__init__(chebForwardTransform, chebReconstruct, chebReconstructDerivative, pointHeight,pointLocation,ordersToEval=None, normalizeMin=None, normalizeRange=None)
+        super().__init__(chebForwardTransform, chebReconstruct, chebReconstructDerivative, chebReconstructHessian, pointHeight,pointLocation,ordersToEval=None, normalizeMin=None, normalizeRange=None)

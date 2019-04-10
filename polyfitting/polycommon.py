@@ -11,7 +11,7 @@ import common as cmn
 class PolynomialAnalyzer():
     """
     """
-    def __init__(self,forwardTransform, reconstruct, reconstructDerivative, pointHeight,pointLocation,ordersToEval=None, normalizeMin=None, normalizeRange=None):
+    def __init__(self,forwardTransform, reconstruct, reconstructDerivative, reconstructHessian, pointHeight,pointLocation,ordersToEval=None, normalizeMin=None, normalizeRange=None):
         self.pointHeight=pointHeight
         self.forwardTransform=forwardTransform
         self.pointLocation=pointLocation
@@ -26,6 +26,7 @@ class PolynomialAnalyzer():
         self.normalizedPointLocation=self.normalize(pointLocation)
         self.reconCall=reconstruct
         self.reconDcall=reconstructDerivative
+        self.reconHcall=reconstructHessian
         if ordersToEval is None:
             if len(pointLocation.shape)==1:
                 self.ordersToEval=cmn.numpyze(self.pointHeight.size-1)
@@ -92,6 +93,13 @@ class PolynomialAnalyzer():
         else:
             locations=self.normalize(locations)
         return self.reconDcall(self.ordersToEval, locations, self.filteredSpectrum(), self.pointHeight.size)
+
+    def reconstructHessian(self, locations=None):
+        if locations is None:
+            locations=self.normalizedPointLocation
+        else:
+            locations=self.normalize(locations)
+        return self.reconHcall(self.ordersToEval, locations, self.filteredSpectrum(), self.pointHeight.size)
 
     def avgSqrdReconstructionError(self):
         return np.mean((self.reconstruction()-self.pointHeight)**2)
