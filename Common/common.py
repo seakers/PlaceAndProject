@@ -72,6 +72,10 @@ def numpyze(input):
         return np.fromiter(input)
     raise TypeError('cannot cast '+str(input)+' into a numpy array')
 
+def unitize(input):
+    i=numpyze(input)
+    return i/np.linalg.norm(i)
+
 def noneSafeConcat(*args):
     if any(e is None for e in args):
         return None

@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy.polynomial.legendre as leg
 import warnings
 
+import MeanPlanes.lowDimMeanPlane
 from MeanPlanes import meanPlane as mP
 from plottingStuffAndDecisionMakers import tradeoffMatrixImage as tMI
 from Common import analyticsCommon as aC, common as cmn
@@ -163,7 +164,7 @@ def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=5, displ
     """
     if objHeaders is None:
         objHeaders=list(map(lambda n: 'obj: '+str(n),range(data.shape[1])))
-    mp=mP.lowDimMeanPlane(data) # create the mean plane
+    mp= MeanPlanes.lowDimMeanPlane.lowDimMeanPlane(data) # create the mean plane
 
     if saveFigsPrepend is not None:
         mps=saveFigsPrepend+'_meanPlane.png'
@@ -202,7 +203,7 @@ def run3danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=5**2,dis
     """
     if objHeaders is None:
         objHeaders=list(map(lambda n: 'obj: '+str(n),range(data.shape[1])))
-    mp=mP.lowDimMeanPlane(data) # create the mean plane
+    mp= MeanPlanes.lowDimMeanPlane.lowDimMeanPlane(data) # create the mean plane
     aC.runShowSaveClose(mp.draw3dMeanPlane,saveFigsPrepend+'_meanPlane.png',displayFig=displayFigs)
     aC.runShowSaveClose(ft.partial(tMI.plotLogTradeRatios,mp,objHeaders),saveFigsPrepend+'_tradeRatios.png',displayFig=displayFigs)
 
@@ -229,7 +230,7 @@ def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None,freqsToKeep=N
     """
     if objHeaders is None:
         objHeaders=list(map(lambda n: 'obj: '+str(n),range(data.shape[1])))
-    mp=mP.lowDimMeanPlane(data) # create the mean plane
+    mp= MeanPlanes.lowDimMeanPlane.lowDimMeanPlane(data) # create the mean plane
 
     aC.runShowSaveClose(ft.partial(tMI.plotLogTradeRatios,mp,objHeaders),saveFigsPrepend+'_tradeRatios.png',displayFig=displayFigs)
 

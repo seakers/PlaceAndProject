@@ -1,5 +1,6 @@
 import scipy as sp
 
+import MeanPlanes.lowDimMeanPlane
 from Common.common import *
 from FourierFitting import fourierAnalytics as fA
 
@@ -134,6 +135,7 @@ def dim3hypersphereTesting(mC=fA, label=''):
     # fa=SlowFourierAnalyzer.fromMeanPlane(mp)
 
 def positiveCovarDemo():
+
     numsmpl=900
     dummyTest3d=pathologicalRing(numsmpl)
     # draw3dSurface(dummyTest3d)
@@ -159,7 +161,7 @@ def positiveCovarDemo():
 
 #     run3danalysis(dummyTest3d)
     from MeanPlanes import meanPlane as mp
-    testmp=mp.lowDimMeanPlane(dummyTest3d)
+    testmp= MeanPlanes.lowDimMeanPlane.lowDimMeanPlane(dummyTest3d)
     print('normal vector')
     print(testmp.normalVect)
     print('basis vectors')

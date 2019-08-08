@@ -1,4 +1,6 @@
 import numpy as np
+
+import MeanPlanes.lowDimMeanPlane
 from MeanPlanes import meanPlane as mP
 import matplotlib.pyplot as plt
 import itertools as it
@@ -18,7 +20,7 @@ def createModels(data, analyzerClasses, numTermsToUse=None, analyzerClassNames=N
         numTermsToUse=range(1, numTermsToUse+1)
 
     print('creating common mean plane')
-    commonMeanPlane=mP.lowDimMeanPlane(data)
+    commonMeanPlane= MeanPlanes.lowDimMeanPlane.lowDimMeanPlane(data)
     print('beginning to build all models')
     models=[[c.fromMeanPlane(commonMeanPlane, n) for n in numTermsToUse] for c in analyzerClasses]
     return commonMeanPlane, models, numTermsToUse, analyzerClassNames

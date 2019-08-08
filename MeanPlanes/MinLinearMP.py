@@ -1,33 +1,46 @@
-from Common.common import *
+import numpy as np
+import scipy as sp
+import scipy.optimize as spo
 
-# TODO: Constrain to be postitive. Use Quadprog from pip
+from MeanPlanes.meanPlane import *
 
-class MeanPlaneError(Exception):
+def minimizeLinearTerms(self):
     pass
+def minimizeLinearTermsOrtho(YTY):
+    alphaNorm=lambda n: np.dot(n,np.dot(YTY.T,YTY))
+    doubleYTY=np.dot(YTY.T,YTY)
+    def fun(x, *args):
+        return np.dot(np.dot(x.T, doubleYTY), x)-np.dot(np.dot(x.T, YTY), x)**2
+    def jac(x, args):
+        return
+    spo.minimize(fun,x0,args,method, jac, hess, hessp, bounds,constraints)
 
-class MeanPlane():
+
+class minLinearMP():
+    """ A mean plane that minimzes the linear terms of the residual"""
     def __init__(self, paretoSamples):
         self.meanPoint=np.mean(paretoSamples,axis=0) # the mean of the samples. a point on the plane
         self.paretoSamples=paretoSamples
         self._centeredSamples=paretoSamples-self.meanPoint
         self.embedDim=paretoSamples.shape[1]
-        self._U, self._S, self._Vt=np.linalg.svd(self._centeredSamples)
+
+        self.n=unitize(self.meanPoint)
+        planePoints=self._centeredSamples-np.outer(np.dot(self._centeredSamples, self.n), self.n)
+        self._U, self._S, self._Vt=np.linalg.svd(planePoints)
 
     @property
     def normalVect(self):
         """
         :return: the normalized normal vector to the plane
         """
-        return self._Vt[-1, :]
+        return self.n
 
     @property
     def basisVects(self):
-        return self._Vt[:-1, :]
+        return self._Vt
 
     @property
     def projectionToPlaneMat(self): # I do believe this is the same as basisVects actually
-        # projection=np.hstack((np.vstack((np.eye(self.embedDim-1),np.zeros(self.embedDim-1))),np.zeros((self.embedDim,1))))
-        # return np.dot(self._V,projection)
         return self.basisVects
 
     @property
@@ -65,22 +78,3 @@ class MeanPlane():
         :return: returns
         """
         return np.tile(self.normalVect[:,np.newaxis],(1,len(self.normalVect)))/np.tile(self.normalVect[np.newaxis,:],(len(self.normalVect),1))
-
-    def pointsInOriginalCoors(self,coorsInMeanPlaneSubspace):
-        if len(coorsInMeanPlaneSubspace.shape) == 1:
-            return np.dot(coorsInMeanPlaneSubspace[:,np.newaxis],np.squeeze(self.basisVects)[np.newaxis,:])+self.meanPoint[np.newaxis,:]
-        else:
-            return np.dot(coorsInMeanPlaneSubspace,self.basisVects)+self.meanPoint[np.newaxis,:]
-
-class NotPointingToOriginError(MeanPlaneError):
-    pass
-
-class DegeneratePlaneError(MeanPlaneError):
-    pass
-
-class OptimFailError(MeanPlaneError):
-    pass
-
-class DimTooHighError(Exception):
-    pass
-
