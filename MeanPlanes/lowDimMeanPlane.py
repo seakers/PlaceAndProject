@@ -7,8 +7,8 @@ from MeanPlanes.meanPlane import MeanPlane, DimTooHighError
 from MeanPlanes.MeanVectMP import MeanVectMP
 
 
-# class lowDimMeanPlane(MeanPlane):
-class lowDimMeanPlane(MeanVectMP):
+class lowDimMeanPlane(MeanPlane):
+# class lowDimMeanPlane(MeanVectMP):
 # class lowDimMeanPlane(PositiveOrthantMeanPlane):
     """
     additional methods and properties enabled by having a mean plane in 2d or 3d. really a convienence for plotting.

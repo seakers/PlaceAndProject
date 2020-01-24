@@ -1,5 +1,8 @@
+from Common.analyticsCommon import filteredSpectrum
 from plottingStuffAndDecisionMakers.tradeoffMatrixImage import *
 import warnings
+import Common.common as cmn
+import numpy.linalg as npl
 
 class SlowFourierAnalyzer():
     """

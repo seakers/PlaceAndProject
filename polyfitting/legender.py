@@ -153,7 +153,7 @@ def culledLegForwardTransform(orders, locations, functionVals, threshold=None):
 
 class CulledLegenderAnalyzer(PolynomialAnalyzer):
     def __init__(self,pointHeight,pointLocation,ordersToEval=None, normalizeMin=None, normalizeRange=None):
-        super().__init__(culledLegForwardTransform, legReconstruct, legReconstructDerivative, pointHeight,pointLocation,ordersToEval=None, normalizeMin=None, normalizeRange=None)
+        super().__init__(culledLegForwardTransform, legReconstruct, legReconstructDerivative, legHessian, pointHeight,pointLocation,ordersToEval=None, normalizeMin=None, normalizeRange=None)
 
 def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=5, displayFigs=True, isMaxObj=None, ordersToRun=None):
     """

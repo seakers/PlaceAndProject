@@ -5,6 +5,7 @@ import functools as ft
 import itertools as it
 from Common.common import *
 import scipy.spatial as spst
+from munkres import Munkres as Munkres
 
 def plotMeanPlaneTradeRatios(mp, objLabels,preconditioner=None):
     """

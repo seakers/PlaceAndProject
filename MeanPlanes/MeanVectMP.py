@@ -4,6 +4,7 @@ import scipy.optimize as spo
 from MeanPlanes.meanPlane import *
 
 class MeanVectMP():
+    """ the meanpane using the mean point (MP) as the normal vector"""
     def __init__(self, paretoSamples):
         self.meanPoint=np.mean(paretoSamples,axis=0) # the mean of the samples. a point on the plane
         self.paretoSamples=paretoSamples
@@ -26,7 +27,7 @@ class MeanVectMP():
         return self._Vt
 
     @property
-    def projectionToPlaneMat(self): # I do believe this is the same as basisVects actually
+    def projectionToPlaneMat(self): # LOGICAL ERROR: this does NOT find the projection into the plane
         return self.basisVects
 
     @property
