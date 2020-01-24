@@ -209,13 +209,16 @@ class rbfSummarizerAnalyzer(rbfAnalyzer):
             self.filteredSpectrum() # hack to force computation
             self.powerDeclineReport()
 
-    def __sortByInfluence(self):
+    @property
+    def __influences(self):
         if len(self.centers.shape)>1:
             n=self.centers.shape[1]
         else:
             n=1
-        influence=self.spectrum * (np.pi**(n/2))/(self.sigmas**n) # latter factor is the integral of the exponential over all space. Obviously want total influence over entire space so multiply by weight
-        ordering=np.argsort(influence)
+        return self.spectrum * (np.pi**(n/2))/(self.sigmas**n) # latter factor is the integral of the exponential over all space. Obviously want total influence over entire space so multiply by weight
+
+    def __sortByInfluence(self):
+        ordering=np.argsort(self.__influences)
 
         weights=self.spectrum[ordering]
         sigmas=self.sigmas[ordering]
@@ -245,17 +248,28 @@ class rbfSummarizerAnalyzer(rbfAnalyzer):
 
     def powerDeclineReport(self):
         w,c,o=self.__sortByInfluence()
+        plt.bar(np.arange(len(w)),self.__influences,color=globalBarPlotColor)
+        if len(c.shape) == 1:
+            xtickLbl=list(( 'center: '+cl+' bandwidth: '+ol +' weight: '+w1 for cl,ol,w1 in zip(numpyToPrettyStr(c), numpyToPrettyStr(o), numpyToPrettyStr(w))))
+        else:
+            xtickLbl=list(( 'center: '+cl+' bandwidth: '+ol +' weight: '+w1 for cl,ol,w1 in zip(multiDimNumpyToPrettyStr(c), numpyToPrettyStr(o), numpyToPrettyStr(w))))
+        plt.xticks(range(len(w)),xtickLbl, rotation=75)
+        plt.ylabel('component influence')
+        plt.xlabel('component stats')
+
+    def rbfWeightPlot(self):
+        w,c,o=self.__sortByInfluence()
         plt.bar(np.arange(len(w)),w,color=globalBarPlotColor)
         if len(c.shape) == 1:
             xtickLbl=list(( 'center: '+cl+' bandwidth: '+ol for cl,ol in zip(numpyToPrettyStr(c), numpyToPrettyStr(o))))
         else:
             xtickLbl=list(( 'center: '+cl+' bandwidth: '+ol for cl,ol in zip(multiDimNumpyToPrettyStr(c), numpyToPrettyStr(o))))
         plt.xticks(range(len(w)),xtickLbl, rotation=75)
-        plt.ylabel('squared power of component')
-        plt.xlabel('representative frequency')
+        plt.ylabel('component weight')
+        plt.xlabel('component stats')
 
     def truncatedPowerDeclineReport(self):
-        return self.powerDeclineReport()
+        return self.rbfWeightPlot()
 
     def report(self, tofile=None):
         w,c,o=self.__sortByInfluence()
@@ -303,7 +317,7 @@ def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=None, di
 
     # maybe use a scatterplot?
     # runShowSaveClose(ft.partial(spectral1dPowerPlot_nonFFT,fa),spts,displayFig=displayFigs)
-    runShowSaveClose(fa.powerDeclineReport,pdr,displayFig=displayFigs)
+    runShowSaveClose(fa.rbfWeightPlot, pdr, displayFig=displayFigs)
 
     runShowSaveClose(ft.partial(rbfApproximationPlot2d,mp,fa,objHeaders),saveFigsPrepend+'_reverseTransform.png',displayFig=displayFigs)
     # runShowSaveClose(ft.partial(plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)
@@ -355,7 +369,7 @@ def run3danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=3**2,dis
     # runShowSaveClose(ft.partial(spectral2dPowerPlot,fa),saveFigsPrepend+'_spectralPower3d.png',displayFig=displayFigs)
     runShowSaveClose(ft.partial(approximationPlot3d,mp,fa),saveFigsPrepend+'_reverseTransform.png',displayFig=displayFigs)
     runShowSaveClose(ft.partial(plot3dErr,mp.inputInPlane,mp.inputResidual),saveFigsPrepend+'_errorPlot.png',displayFig=displayFigs)
-    runShowSaveClose(fa.powerDeclineReport,saveFigsPrepend+'_powerDeclineReport.png',displayFig=displayFigs)
+    runShowSaveClose(fa.rbfWeightPlot, saveFigsPrepend + '_powerDeclineReport.png', displayFig=displayFigs)
     # runShowSaveClose(ft.partial(plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)
 
 def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None,freqsToKeep=None,displayFigs=True):
@@ -378,7 +392,7 @@ def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None,freqsToKeep=N
     if saveFigsPrepend is not None:
         fa.report(saveFigsPrepend+'_report.csv')
 
-    runShowSaveClose(fa.powerDeclineReport,saveFigsPrepend+'_powerDeclinePlot.png',displayFig=displayFigs)
+    runShowSaveClose(fa.rbfWeightPlot, saveFigsPrepend + '_powerDeclinePlot.png', displayFig=displayFigs)
     # runShowSaveClose(ft.partial(plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)
 
 if __name__=="__main__":

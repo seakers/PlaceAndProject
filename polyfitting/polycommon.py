@@ -199,7 +199,7 @@ class PolynomialSummarizer():
         else:
             plt.xticks(range(len(self.freqsTaken)),cmn.numpyToPrettyStr(self.freqsTaken), rotation=75)
         plt.ylabel('squared power of component')
-        plt.xlabel('representative frequency')
+        plt.xlabel('polynomial term and orders')
 
     def report(self, tofile=None):
         if tofile is None:

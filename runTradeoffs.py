@@ -123,12 +123,12 @@ def runComparisons(probName,metricsFile,preferenceFile, filePrepend=None):
     cP.multipleReconstructionPlotFromData(normalizedData, knownClasses, numTermsToUse=4, analyzerClassNames=None, holdoutData=None, saveFig=mps, displayFig=True, objLabels=None)
 
 if __name__=="__main__":
-    metricsFiles=list(filter(lambda f: f[-8:]=='_met.csv' and 'walker' not in f, os.listdir('./cityplotData')))
+    # metricsFiles=list(filter(lambda f: f[-8:]=='_met.csv' and 'walker' not in f, os.listdir('./cityplotData')))
     # metricsFiles=['continuous6obj_met.csv',]
     # metricsFiles=['EOSSdownSel3_met.csv',]
-    # metricsFiles=['EOSSdownSel_met.csv','GNC_scenario_9_met.csv']
+    # metricsFiles=['EOSSdownSel3_met.csv','GNC_scenario_9_met.csv']
     # metricsFiles=['EOSSdownSel_met.csv',]
-    # metricsFiles=['GNC_scenario_1_met.csv',]
+    metricsFiles=['GNC_scenario_9_met.csv',]
     for metricsFile in metricsFiles:
         pathedMetricFile=os.path.join('./cityplotData',metricsFile)
         if os.path.isfile(pathedMetricFile):
@@ -136,8 +136,8 @@ if __name__=="__main__":
             probName=pathParts[-1][:-8]
             print('analyzing: '+probName)
             # fixHeader(pathedMetricFile)
-            # runProblemAnalysis(probName,pathedMetricFile,r'./cityplotData/'+probName+'_pref.csv', fA, filePrepend=r'./output/fourier_')
-            runProblemAnalysis(probName,pathedMetricFile,r'./cityplotData/'+probName+'_pref.csv', lA, filePrepend=r'./output/legendre_')
+            runProblemAnalysis(probName,pathedMetricFile,r'./cityplotData/'+probName+'_pref.csv', fA, filePrepend=r'./output/fourier_')
+            # runProblemAnalysis(probName,pathedMetricFile,r'./cityplotData/'+probName+'_pref.csv', lA, filePrepend=r'./output/legendre_')
             # runProblemAnalysis(probName,pathedMetricFile,r'./cityplotData/'+probName+'_pref.csv', rA, filePrepend=r'./output/rbf_')
             # runComparisons(probName, pathedMetricFile, r'./cityplotData/'+probName+'_pref.csv', filePrepend=r'./output/')
         else:

@@ -3,6 +3,9 @@ import scipy as sp
 import MeanPlanes.lowDimMeanPlane
 from Common.common import *
 from FourierFitting import fourierAnalytics as fA
+from RBFN import rbfAnalytics as rA
+from polyfitting import legender as lA
+import pandas as pd
 
 
 def unbalanced(mC=fA):
@@ -178,7 +181,8 @@ if __name__=='__main__':
     # wavyPfrontDemo(fA, 'fourier');  wavyPfrontDemo(lA, 'legpoly');
     # wavyPfrontDemo(rA, 'rbfn')
     # circlePfrontDemo()
-    # dim3hypersphereTesting(fA, 'fourier'); dim3hypersphereTesting(lA, 'legpoly');
-    # dim3hypersphereTesting(rA,'rbfn')
+    dim3hypersphereTesting(fA, 'fourier')
+    dim3hypersphereTesting(lA, 'legpoly')
+    dim3hypersphereTesting(rA,'rbfn')
     # unbalanced()
     positiveCovarDemo()

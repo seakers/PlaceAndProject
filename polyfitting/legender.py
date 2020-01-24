@@ -189,7 +189,7 @@ def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=5, displ
     if saveFigsPrepend is not None:
         fa.report(saveFigsPrepend+'_report.csv')
 
-    aC.runShowSaveClose(ft.partial(aC.spectral1dPowerPlot_nonFFT,fa),spts,displayFig=displayFigs)
+    aC.runShowSaveClose(ft.partial(aC.spectral1dPowerPlot_nonFFT_noSquare,fa),spts,displayFig=displayFigs)
 
     aC.runShowSaveClose(ft.partial(aC.approximationPlot2d,mp,fa,objHeaders),rts,displayFig=displayFigs)
     aC.runShowSaveClose(ft.partial(tMI.plotTradeRatios,mp,fa,objHeaders),saveFigsPrepend+'_tradeoffPlot.png',displayFig=displayFigs)

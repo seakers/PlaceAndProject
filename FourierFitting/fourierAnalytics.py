@@ -2,7 +2,14 @@ from Common.analyticsCommon import filteredSpectrum
 from plottingStuffAndDecisionMakers.tradeoffMatrixImage import *
 import warnings
 import Common.common as cmn
+from Common.analyticsCommon import *
+import numpy as np
+import pandas as pd
+import scipy as sp
+import scipy.ndimage.filters as spndf
 import numpy.linalg as npl
+
+import MeanPlanes.lowDimMeanPlane as lmp
 
 class SlowFourierAnalyzer():
     """
@@ -330,7 +337,7 @@ def run2danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=2, displ
     """
     if objHeaders is None:
         objHeaders=list(map(lambda n: 'obj: '+str(n),range(data.shape[1])))
-    mp=lowDimMeanPlane(data) # create the mean plane
+    mp=lmp.lowDimMeanPlane(data) # create the mean plane
 
     runShowSaveClose(mp.draw2dMeanPlane,saveFigsPrepend+'_meanPlane.png',displayFig=displayFigs)
     runShowSaveClose(ft.partial(plotLogTradeRatios,mp,objHeaders),saveFigsPrepend+'_tradeRatios.png',displayFig=displayFigs)
@@ -370,7 +377,7 @@ def run3danalysis(data,objHeaders=None,saveFigsPrepend=None,freqsToKeep=3**2,dis
     """
     if objHeaders is None:
         objHeaders=list(map(lambda n: 'obj: '+str(n),range(data.shape[1])))
-    mp=lowDimMeanPlane(data) # create the mean plane
+    mp=lmp.lowDimMeanPlane(data) # create the mean plane
     runShowSaveClose(mp.draw3dMeanPlane,noneSafeConcat(saveFigsPrepend,'_meanPlane.png'),displayFig=displayFigs)
     runShowSaveClose(ft.partial(plotLogTradeRatios,mp,objHeaders),noneSafeConcat(saveFigsPrepend,'_tradeRatios.png'),displayFig=displayFigs)
 
@@ -394,7 +401,7 @@ def runHighDimAnalysis(data, objHeaders=None, saveFigsPrepend=None,freqsToKeep=N
     """
     if objHeaders is None:
         objHeaders=list(map(lambda n: 'obj: '+str(n),range(data.shape[1])))
-    mp=lowDimMeanPlane(data) # create the mean plane
+    mp=lmp.lowDimMeanPlane(data) # create the mean plane
 
     runShowSaveClose(ft.partial(plotLogTradeRatios,mp,objHeaders),saveFigsPrepend+'_tradeRatios.png',displayFig=displayFigs)
 

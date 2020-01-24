@@ -23,7 +23,10 @@ def filteredSpectrum(inputFilters, spectralFilters,frequencies,locations,heights
 
 def spectral1dPowerPlot(fourierAnalyzerObj):
     spectralPower=np.abs(np.fft.fftshift(fourierAnalyzerObj.spectrum))**2
-    plt.plot(np.fft.fftshift(fourierAnalyzerObj.fftFreqs),spectralPower,'k.-')
+    halfPoint=int(len(fourierAnalyzerObj.fftFreqs)/2)
+    freqs=np.fft.fftshift(fourierAnalyzerObj.fftFreqs)[halfPoint:-1]
+    cutPower=spectralPower[halfPoint:-1]
+    plt.plot(freqs,cutPower,'k.-')
     # axis_font={'size':'28'}
     # plt.xlabel('frequency',**axis_font)
     # plt.ylabel('square power',**axis_font)
@@ -32,7 +35,10 @@ def spectral1dPowerPlot(fourierAnalyzerObj):
 def spectral1dPhasePlot(fourierAnalyzerObj):
     spectralPhase=np.angle(np.fft.fftshift(fourierAnalyzerObj.spectrum))
     # print(spectralPhase)
-    plt.plot(np.fft.fftshift(fourierAnalyzerObj.fftFreqs),spectralPhase,'k.-')
+    halfPoint=int(len(fourierAnalyzerObj.fftFreqs)/2)
+    freqs=np.fft.fftshift(fourierAnalyzerObj.fftFreqs)[halfPoint:-1]
+    cutPhase=spectralPhase[halfPoint:-1]
+    plt.plot(freqs,cutPhase,'k.-')
     # axis_font={'size':'28'}
     # plt.xlabel('frequency',**axis_font)
     # plt.ylabel('phase (radians)',**axis_font)
@@ -66,6 +72,15 @@ def spectral1dPowerPlot_nonFFT(analyzerObj):
     # plt.xlabel('frequency',**axis_font)
     # plt.ylabel('square power',**axis_font)
     plt.xlabel('frequency')
+    plt.ylabel('square power')
+
+def spectral1dPowerPlot_nonFFT_noSquare(analyzerObj):
+    spectralPower=np.abs(analyzerObj.spectrum)
+    plt.plot(analyzerObj.fullOrders,spectralPower,'k.-')
+    # axis_font={'size':'28'}
+    # plt.xlabel('frequency',**axis_font)
+    # plt.ylabel('square power',**axis_font)
+    plt.xlabel('order')
     plt.ylabel('square power')
 
 def spectral2dPowerImage(fourierAnalyzerObj):
